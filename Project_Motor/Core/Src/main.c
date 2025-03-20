@@ -117,8 +117,7 @@ void control_wheel(uint32_t mode){
 	else if(op_time>3) op_time = 0;
 }
 */
-void control_wheel(uint32_t mode){
-	uint32_t speed = 5;
+void control_wheel(uint32_t mode, uint32_t speed){
 	if(mode==0){
 		// stop
 		direction = 76;
@@ -159,7 +158,7 @@ void DFPlayer_Play_Track(uint16_t track_number)
     
     DFPlayer_Send_Command(command, sizeof(command));
 }
-
+/*
 void DFPlayer_Stop(void)
 {
     uint8_t command[10];
@@ -176,6 +175,7 @@ void DFPlayer_Stop(void)
     
     DFPlayer_Send_Command(command, sizeof(command));
 }
+*/
 void start_pan(){
 	HAL_GPIO_WritePin(PAN_GPIO_Port,PAN_Pin,GPIO_PIN_SET);
 }
@@ -232,7 +232,7 @@ int main(void)
 		if(it_1sec){
 			it_1sec = 0;
 			//BSP_LED_Toggle(LED2);
-			control_wheel(mode_input);
+			control_wheel(mode_input,5);
 			mode_input = (mode_input+1)%3;
 			if(!is_open){
 				is_open = 1;
