@@ -71,6 +71,8 @@ volatile uint8_t it_1sec = 0;
 uint8_t aTxBuffer[TXBUFFERSIZE];
 //Transmit Data Complete flag
 __IO ITStatus Uart1_Ready = RESET;
+//Receive Check Buffer
+uint8_t checkReceive;
 
 /* USER CODE END PV */
 
@@ -120,6 +122,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+  /* Set transmission flag: transfer complete */
+	if (UartHandle->Instance == USART1)
+		Uart1_Ready = SET;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
   /* Set transmission flag: transfer complete */
 	if (UartHandle->Instance == USART1)
@@ -193,13 +202,13 @@ void combineData(void) {
 	for (volatile int i = 0; i < 5; i++) {	
 		switch(i) {
 			case 0:
-				data = bVib;
+				data = rot;
 				break;
 			case 1: 
-				data = light;
+				data = bVib;
 				break ;
 			case 2:
-				data = rot;
+				data = light;
 				break ;
 			case 3:
 				data = Humidity;
@@ -269,31 +278,45 @@ int main(void)
   {
 		// HW_Get_DHT11();
 		
-		if (it_1sec == 1) {
-			it_1sec = 0;
-			BSP_LED_Toggle(LED2);
-			HW_Get_DHT11();
-			HW_Get_Rotation();
-			HW_Get_Light();
-			combineData();
-			Printf("Temp:%d Hum:%d Rot:%d Light:%d Vib:%d\r\n", Temperature, Humidity, rot, light, bVib);
-			for (volatile int i = 0; i < 15; i++) {
-				Printf("%d", aTxBuffer[i]);
-			}
-			Printf("\r\n");
-			if(HAL_UART_Transmit_IT(&huart1, (uint8_t*)aTxBuffer, TXBUFFERSIZE)!= HAL_OK)
-			{
-				Error_Handler();
-			}
-			
-			/*##-3- Wait for the end of the transfer ###################################*/   
-			while (Uart1_Ready != SET)
-			{
-			}
-			
-			/* Reset transmission flag */
-			Uart1_Ready = RESET;
+		//if (it_1sec == 1) {
+		it_1sec = 0;
+		BSP_LED_Toggle(LED2);
+		HW_Get_DHT11();
+		HW_Get_Rotation();
+		HW_Get_Light();
+		combineData();
+		Printf("Temp:%d Hum:%d Rot:%d Light:%d Vib:%d\r\n", Temperature, Humidity, rot, light, bVib);
+		for (volatile int i = 0; i < 15; i++) {
+			Printf("%d", aTxBuffer[i]);
 		}
+		Printf("\r\n");
+		if(HAL_UART_Transmit_IT(&huart1, (uint8_t*)aTxBuffer, TXBUFFERSIZE)!= HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		/*##-3- Wait for the end of the transfer ###################################*/   
+		while (Uart1_Ready != SET)
+		{
+		}
+		
+		/* Reset transmission flag */
+		Uart1_Ready = RESET;
+		
+		if(HAL_UART_Receive_IT(&huart1, &checkReceive, 1) != HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		/*##-5- Wait for the end of the transfer ###################################*/   
+		while (Uart1_Ready != SET)
+		{
+		} 
+		
+		/* Reset transmission flag */
+		Uart1_Ready = RESET;
+		//HAL_Delay(100);
+		//}
 	
     /* USER CODE END WHILE */
 

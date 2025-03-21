@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include <string.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -44,10 +45,31 @@ UART_HandleTypeDef huart4;
 
 /* USER CODE BEGIN PV */
 
-//Transmit Data Buffer
+// Shock
+volatile int bVib = 0;
+
+// DHT11
+volatile int Temperature, Humidity;
+
+//Rotation
+volatile int rot;
+
+//Light
+volatile int light;
+
+//LCD
+Lcd_HandleTypeDef lcd;
+
+//Receive Data Buffer
 uint8_t aRxBuffer[RXBUFFERSIZE];
 //Transmit Data Complete flag
 __IO ITStatus Uart4_Ready = RESET;
+
+//Transmit receive Complete 
+uint8_t receiveComplete = 1;
+
+//LCD String
+char lcd_string[16];
 
 /* USER CODE END PV */
 
@@ -67,6 +89,79 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
   /* Set transmission flag: transfer complete */
 	if (UartHandle->Instance == USART4)
 		Uart4_Ready = SET; 
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+  /* Set transmission flag: transfer complete */
+	if (UartHandle->Instance == USART4)
+		Uart4_Ready = SET;
+}
+
+void dataInit(void) {
+	Temperature = 0;
+	Humidity = 0;
+	bVib = 0;
+	rot = 0;
+	light = 0;
+}
+
+void dataParsing(void) {
+	for (volatile int i = 0; i < 5; i++) {
+		volatile int digit = 100;
+		for (volatile int j = i * 3; j < (i * 3) + 3; j++) {
+			switch(i) {
+				case 0:
+					Temperature = Temperature + (aRxBuffer[j] * digit);
+					break ;
+				case 1:
+					Humidity = Humidity + (aRxBuffer[j] * digit);
+					break ;
+				case 2:
+					light = light + (aRxBuffer[j] * digit);
+					break ;
+				case 3:
+					bVib = bVib + (aRxBuffer[j] * digit);
+					break ;
+				case 4:
+					rot = rot + (aRxBuffer[j] * digit);
+					break ;
+				default:
+					break ;
+			}
+			digit = digit / 10;
+		}
+	}
+}
+
+void lcdPrint(void) {
+	sprintf(lcd_string, "T:%d%cC H:%d%% S:%d", Temperature, 223, Humidity, bVib);
+	
+	Lcd_cursor(&lcd, 0, 0);
+	Lcd_string(&lcd, lcd_string);
+	
+	Lcd_cursor(&lcd, 1, 0);
+	Lcd_string(&lcd, "V:");
+	Lcd_int(&lcd, rot);
+	if (rot < 100) {
+		Lcd_cursor(&lcd, 1, 4);
+		lcd_write_data(&lcd, 32);
+		if (rot < 10) {
+			Lcd_cursor(&lcd, 1, 3);
+			lcd_write_data(&lcd, 32);
+		}
+	}
+	Lcd_cursor(&lcd, 1, 7);
+	Lcd_string(&lcd, "B:");
+	if (light < 100) {
+		Lcd_cursor(&lcd, 1, 11);
+		lcd_write_data(&lcd, 32);
+		if (light < 10) {
+			Lcd_cursor(&lcd, 1, 10);
+			lcd_write_data(&lcd, 32);
+		}
+	}
+	Lcd_int(&lcd, light);
 }
 
 /* USER CODE END 0 */
@@ -107,16 +202,13 @@ int main(void)
   Lcd_PortType ports[] = { D4_5_6_PORT, D4_5_6_PORT, D4_5_6_PORT, D7_PORT };
   // Lcd_PinType pins[] = {D4_Pin, D5_Pin, D6_Pin, D7_Pin};
   Lcd_PinType pins[] = {D4, D5, D6, D7};
-  Lcd_HandleTypeDef lcd;
   // Lcd_create(ports, pins, RS_GPIO_Port, RS_Pin, EN_GPIO_Port, EN_Pin, LCD_4_BIT_MODE);
   lcd = Lcd_create(ports, pins, RS_PORT, RS, E_PORT, E, LCD_4_BIT_MODE);
-  Lcd_cursor(&lcd, 0, 0);
-  Lcd_string(&lcd, "Hello World!!");
-	
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	
   while (1)
   {
 		if(HAL_UART_Receive_IT(&huart4, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
@@ -126,15 +218,22 @@ int main(void)
 		
 		while (Uart4_Ready != SET)
 		{
-
 		} 
 		Uart4_Ready = RESET;
 		
-		for (volatile int i = 0; i < 15; i++)
+		dataParsing();
+		lcdPrint();
+		dataInit();
+
+		if(HAL_UART_Transmit_IT(&huart4, &receiveComplete, 1)!= HAL_OK)
 		{
-			Lcd_cursor(&lcd, 1, i);
-			Lcd_int(&lcd, aRxBuffer[i]);
+			Error_Handler();
 		}
+		
+		while (Uart4_Ready != SET)
+		{
+		} 
+		Uart4_Ready = RESET;
 		
     /* USER CODE END WHILE */
 
