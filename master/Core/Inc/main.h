@@ -36,7 +36,18 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+extern __IO ITStatus Uart4T_Ready;
+extern __IO ITStatus Uart4R_Ready;
+extern __IO ITStatus Uart5R_Ready;
+extern uint8_t ToEsp[15];
+extern uint8_t FromEsp[12];
+extern uint8_t FromSensor[15];
+extern volatile uint32_t isTransmitting;
+extern volatile uint32_t	it_1sec_uart;
+extern TIM_HandleTypeDef htim6;
+extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart4;
+extern UART_HandleTypeDef huart5;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -71,7 +82,9 @@ void Error_Handler(void);
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
-
+#define TOESPSIZE 15
+#define FROMESPSIZE 12
+#define FROMSENSORSIZE 15
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

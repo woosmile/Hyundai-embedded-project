@@ -25,6 +25,10 @@
 #include "command.h"
 #include "at.h"
 #include "stm32l0xx_nucleo.h"
+#include "receiver.h"
+#include "timer.h"
+#include "transmitter.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,14 +38,21 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define FROMESPSIZE 6
-#define FROMSENSORSIZE 12
-#define TOESPSIZE 12
-__IO ITStatus Uart4_Ready = RESET;
-__IO ITStatus Uart5_Ready = RESET;
-	uint8_t FromEsp[FROMESPSIZE];
-	uint8_t FromSensor[FROMSENSORSIZE];
-	uint8_t ToEsp[TOESPSIZE];
+//#define TOESPSIZE 15
+//#define FROMESPSIZE 12
+//#define FROMSENSORSIZE 15
+__IO ITStatus Uart4T_Ready = RESET;
+__IO ITStatus Uart4R_Ready = RESET;
+__IO ITStatus Uart5R_Ready = RESET;
+uint8_t ToEsp[TOESPSIZE] = {'#', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '$'};
+uint8_t FromEsp[FROMESPSIZE];
+uint8_t FromSensor[FROMSENSORSIZE];
+volatile uint32_t	it_1sec_uart = 0;
+volatile uint32_t isTransmitting = 0;
+TIM_HandleTypeDef htim6;  // ??? ??? ??
+UART_HandleTypeDef huart2;  // USART2 ??? ??
+UART_HandleTypeDef huart4;  // USART4 ??? ??
+UART_HandleTypeDef huart5;  // USART5 ??? ??
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,9 +61,7 @@ __IO ITStatus Uart5_Ready = RESET;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-UART_HandleTypeDef huart2;
-UART_HandleTypeDef huart4;
-UART_HandleTypeDef huart5;
+
 
 /* USER CODE BEGIN PV */
 
@@ -64,6 +73,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART4_UART_Init(void);
 static void MX_USART5_UART_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -105,28 +115,23 @@ int main(void)
   MX_USART4_UART_Init();
   MX_USART5_UART_Init();
   MX_USART2_UART_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 	//CMD_Init();
-	//HAL_UART_Receive_IT(&huart4, FromEsp, sizeof(FromEsp));  // ???? ?? ?? ??
+	HAL_TIM_Base_Start_IT(&htim6);
 	//HAL_UART_Receive_IT(&huart5, FromSensor, sizeof(FromSensor));  // ???? ?? ?? ??
-	Printf("RESET\r\n");
+	Printf("START\r\n");
+	HAL_UART_Receive_IT(&huart4, (uint8_t*)FromEsp, FROMESPSIZE);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		//CMD_Process();
-		// ?? ???? + ?? ??
-		if(HAL_UART_Receive_IT(&huart4, (uint8_t *)FromEsp, FROMESPSIZE) != HAL_OK)
-		{
-			Error_Handler();
+		//UART4 TX(ESP)
+		if(it_1sec_uart == 1){
+			transmitdata();
 		}
-		while (Uart4_Ready != SET)
-		{
-		}
-		Printf("Data from ESP<%s> is received successfully.\r\n", FromEsp);
-		Uart4_Ready = RESET;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -180,6 +185,44 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 800-1;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 10000-1;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
+
 }
 
 /**
@@ -327,26 +370,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-	if (huart->Instance == USART4)  // USART2 ????? ???? ?? ??
-	{
-		Uart4_Ready = SET;
-	}
-	if (huart->Instance == USART5)  // USART2 ????? ???? ?? ??
-	{
-		//HAL_UART_Receive_IT(&huart5, FromSensor, sizeof(FromSensor));  // ???? ?? ?? ??
-		Printf("Data from Sensor<%s> is received successfullyr\n", FromSensor);
-		Uart5_Ready = SET;
-	}
-}
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-	if (huart->Instance == USART4)  // USART2 ????? ???? ?? ??
-	{
-		//Printf("Data to ESP<%s> is sent successfully.\r\n", ToEsp);
-	}
-}
 /* USER CODE END 4 */
 
 /**
