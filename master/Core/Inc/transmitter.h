@@ -28,6 +28,7 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void transmitdata(void);
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

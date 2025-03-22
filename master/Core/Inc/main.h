@@ -39,9 +39,9 @@ extern "C" {
 extern __IO ITStatus Uart4T_Ready;
 extern __IO ITStatus Uart4R_Ready;
 extern __IO ITStatus Uart5R_Ready;
-extern uint8_t ToEsp[15];
-extern uint8_t FromEsp[12];
-extern uint8_t FromSensor[15];
+extern uint8_t ToEsp[];
+extern uint8_t FromEsp[];
+extern uint8_t FromSensor[];
 extern volatile uint32_t isTransmitting;
 extern volatile uint32_t	it_1sec_uart;
 extern TIM_HandleTypeDef htim6;
@@ -82,11 +82,11 @@ void Error_Handler(void);
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
-#define TOESPSIZE 15
-#define FROMESPSIZE 12
-#define FROMSENSORSIZE 15
-/* USER CODE BEGIN Private defines */
 
+/* USER CODE BEGIN Private defines */
+#define TOESPSIZE 15
+#define FROMESPSIZE 15
+#define FROMSENSORSIZE 15
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

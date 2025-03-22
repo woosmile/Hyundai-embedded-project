@@ -38,9 +38,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-//#define TOESPSIZE 15
-//#define FROMESPSIZE 12
-//#define FROMSENSORSIZE 15
 __IO ITStatus Uart4T_Ready = RESET;
 __IO ITStatus Uart4R_Ready = RESET;
 __IO ITStatus Uart5R_Ready = RESET;
@@ -61,7 +58,11 @@ UART_HandleTypeDef huart5;  // USART5 ??? ??
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim6;
 
+UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart4;
+UART_HandleTypeDef huart5;
 
 /* USER CODE BEGIN PV */
 
@@ -75,7 +76,9 @@ static void MX_USART5_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
-
+void StartTransmitToEspTask(void *argument);
+void StartReceiveFromEspTask(void *argument);
+void StartReceiveFromSensorTask(void *argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -129,9 +132,9 @@ int main(void)
   while (1)
   {
 		//UART4 TX(ESP)
-		if(it_1sec_uart == 1){
-			transmitdata();
-		}
+		//if(it_1sec_uart == 1){
+		//	transmitdata();
+		//}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
