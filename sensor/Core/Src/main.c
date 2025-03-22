@@ -47,6 +47,7 @@ TIM_HandleTypeDef htim7;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart4;
 
 /* USER CODE BEGIN PV */
 
@@ -71,6 +72,9 @@ volatile uint8_t it_1sec = 0;
 uint8_t aTxBuffer[TXBUFFERSIZE];
 //Transmit Data Complete flag
 __IO ITStatus Uart1_Ready = RESET;
+__IO ITStatus Uart4_Ready = RESET;
+//Receive Check Buffer
+uint8_t checkReceive;
 
 /* USER CODE END PV */
 
@@ -82,6 +86,7 @@ static void MX_TIM7_Init(void);
 static void MX_ADC_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_USART4_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -124,6 +129,17 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
   /* Set transmission flag: transfer complete */
 	if (UartHandle->Instance == USART1)
 		Uart1_Ready = SET;
+	else if (UartHandle->Instance == USART4)
+		Uart4_Ready = SET;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+  /* Set transmission flag: transfer complete */
+	if (UartHandle->Instance == USART1)
+		Uart1_Ready = SET;
+	else if (UartHandle->Instance == USART4)
+		Uart4_Ready = SET;
 }
 
 void HW_Get_Rotation( void ) 
@@ -193,13 +209,13 @@ void combineData(void) {
 	for (volatile int i = 0; i < 5; i++) {	
 		switch(i) {
 			case 0:
-				data = bVib;
+				data = rot;
 				break;
 			case 1: 
-				data = light;
+				data = bVib;
 				break ;
 			case 2:
-				data = rot;
+				data = light;
 				break ;
 			case 3:
 				data = Humidity;
@@ -251,6 +267,7 @@ int main(void)
   MX_ADC_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
+  MX_USART4_UART_Init();
   /* USER CODE BEGIN 2 */
 	
 	HAL_TIM_Base_Start_IT(&htim7);
@@ -269,31 +286,80 @@ int main(void)
   {
 		// HW_Get_DHT11();
 		
-		if (it_1sec == 1) {
-			it_1sec = 0;
-			BSP_LED_Toggle(LED2);
-			HW_Get_DHT11();
-			HW_Get_Rotation();
-			HW_Get_Light();
-			combineData();
-			Printf("Temp:%d Hum:%d Rot:%d Light:%d Vib:%d\r\n", Temperature, Humidity, rot, light, bVib);
-			for (volatile int i = 0; i < 15; i++) {
-				Printf("%d", aTxBuffer[i]);
-			}
-			Printf("\r\n");
-			if(HAL_UART_Transmit_IT(&huart1, (uint8_t*)aTxBuffer, TXBUFFERSIZE)!= HAL_OK)
-			{
-				Error_Handler();
-			}
-			
-			/*##-3- Wait for the end of the transfer ###################################*/   
-			while (Uart1_Ready != SET)
-			{
-			}
-			
-			/* Reset transmission flag */
-			Uart1_Ready = RESET;
+		//if (it_1sec == 1) {
+		it_1sec = 0;
+		BSP_LED_Toggle(LED2);
+		HW_Get_DHT11();
+		HW_Get_Rotation();
+		HW_Get_Light();
+		combineData();
+		Printf("Temp:%d Hum:%d Rot:%d Light:%d Vib:%d\r\n", Temperature, Humidity, rot, light, bVib);
+		for (volatile int i = 0; i < 15; i++) {
+			Printf("%d", aTxBuffer[i]);
 		}
+		Printf("\r\n");
+		
+		
+		
+		if(HAL_UART_Transmit_IT(&huart1, (uint8_t*)aTxBuffer, TXBUFFERSIZE)!= HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		/*##-3- Wait for the end of the transfer ###################################*/   
+		while (Uart1_Ready != SET)
+		{
+		}
+		
+		/* Reset transmission flag */
+		Uart1_Ready = RESET;
+		
+		if(HAL_UART_Receive_IT(&huart1, &checkReceive, 1) != HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		/*##-5- Wait for the end of the transfer ###################################*/   
+		while (Uart1_Ready != SET)
+		{
+		} 
+		
+		/* Reset transmission flag */
+		Uart1_Ready = RESET;
+		
+		
+		
+		
+		
+		if(HAL_UART_Transmit_IT(&huart4, (uint8_t*)aTxBuffer, TXBUFFERSIZE)!= HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		/*##-3- Wait for the end of the transfer ###################################*/   
+		while (Uart4_Ready != SET)
+		{
+		}
+		
+		/* Reset transmission flag */
+		Uart4_Ready = RESET;
+		
+		if(HAL_UART_Receive_IT(&huart4, &checkReceive, 1) != HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		/*##-5- Wait for the end of the transfer ###################################*/   
+		while (Uart4_Ready != SET)
+		{
+		} 
+		
+		/* Reset transmission flag */
+		Uart4_Ready = RESET;
+		
+		bVib = 0;
+		//HAL_Delay(100);
+		//}
 	
     /* USER CODE END WHILE */
 
@@ -538,9 +604,8 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE BEGIN USART2_Init 1 */
 		HW_VCOM_Init(&huart2);
-
-  /* USER CODE END USART2_Init 1 */
 #if 0
+  /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
   huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
@@ -559,6 +624,41 @@ static void MX_USART2_UART_Init(void)
 #endif
 
   /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief USART4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART4_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART4_Init 0 */
+
+  /* USER CODE END USART4_Init 0 */
+
+  /* USER CODE BEGIN USART4_Init 1 */
+
+  /* USER CODE END USART4_Init 1 */
+  huart4.Instance = USART4;
+  huart4.Init.BaudRate = 9600;
+  huart4.Init.WordLength = UART_WORDLENGTH_8B;
+  huart4.Init.StopBits = UART_STOPBITS_1;
+  huart4.Init.Parity = UART_PARITY_NONE;
+  huart4.Init.Mode = UART_MODE_TX_RX;
+  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART4_Init 2 */
+
+  /* USER CODE END USART4_Init 2 */
 
 }
 
