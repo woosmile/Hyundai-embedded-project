@@ -21,6 +21,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "hw_vcom.h"
+#include "command.h"
+#include "at.h"
 #include "stm32l0xx_nucleo.h"
 /* USER CODE END Includes */
 
@@ -62,17 +65,40 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 volatile uint32_t	it_1sec = 0;
-volatile uint32_t direction = 49;
-volatile uint32_t is_open = 0;
+volatile uint32_t direction = 0;
 volatile uint32_t degree = 0;
 volatile uint32_t mode_input = 0;
-volatile uint32_t op_time = 0;
+//volatile uint32_t op_time = 0;
+
+volatile uint32_t temperature = 0;
+volatile uint32_t humidity = 0;
+volatile uint32_t light_lux = 0; //0~326
+volatile uint32_t shock = 0;
+volatile uint32_t potentiometer = 0; //0~326
+
+volatile uint32_t is_open_door = 0;
+volatile uint32_t temp_user = 0;
+volatile uint32_t is_open_sunroof = 0;
+volatile uint32_t bluetooth = 0;
+
+volatile uint16_t track = 1;
+#define FROMESPSIZE 6
+#define FROMSENSORSIZE 12
+#define TOESPSIZE 12
+__IO ITStatus Uart1_Ready = RESET;
+__IO ITStatus Uart4_Ready = RESET;
+__IO ITStatus Uart5_Ready = RESET;
+uint8_t FromEsp[FROMESPSIZE];
+uint8_t FromSensor[FROMSENSORSIZE];
+uint8_t ToEsp[TOESPSIZE];
+
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
  if(htim->Instance== TIM7)
  {
 	 it_1sec = 1;
-	 if(op_time!=0) op_time++;
+	 //if(op_time!=0) op_time++;
  }
 }
 
@@ -117,8 +143,8 @@ void control_wheel(uint32_t mode){
 	else if(op_time>3) op_time = 0;
 }
 */
-void control_wheel(uint32_t mode){
-	uint32_t speed = 5;
+/*
+void control_wheel(uint32_t mode, uint32_t speed){
 	if(mode==0){
 		// stop
 		direction = 76;
@@ -134,6 +160,12 @@ void control_wheel(uint32_t mode){
 		direction = 75-speed;
 		__HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2,direction);
 	}
+}
+*/
+void control_wheel(){
+		volatile int speed = ((int)potentiometer-160)/10;
+		direction = 76 + speed;
+		__HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2,direction);
 }
 void DFPlayer_Send_Command(uint8_t* command, uint8_t length)
 {
@@ -157,30 +189,32 @@ void DFPlayer_Play_Track(uint16_t track_number)
 		command[8] = checksum & 0xFF; // Checksum (optional, can be computed)
     command[9] = 0xEF;                       // End byte
     
-    DFPlayer_Send_Command(command, sizeof(command));
+		DFPlayer_Send_Command(command, sizeof(command));
 }
-
 void DFPlayer_Stop(void)
 {
     uint8_t command[10];
-    
-    // 0x7E: Start byte, 0xFF: Version byte, 0x16: Command byte (Stop)
-    command[0] = 0x7E;
+  
+		command[0] = 0x7E;
     command[1] = 0xFF;
-    command[2] = 0x16;
-    command[3] = 0x00;
+    command[2] = 0x06;
+    command[3] = 0x0E;
     command[4] = 0x00;
-    command[5] = 0x00;
-    command[6] = 0x00;
-    command[7] = 0xEF;
-    
+    command[5] = 0x00; // High byte of track number
+    command[6] = 0x00; // Low byte of track number
+		uint16_t checksum = 0xFFFF - (command[1]+command[2]+command[3]+command[4]+command[5]+command[6]) + 1;
+    command[7] = (checksum >> 8) & 0xFF;
+		command[8] = checksum & 0xFF; // Checksum (optional, can be computed)
+    command[9] = 0xEF;                       // End byte
+	
     DFPlayer_Send_Command(command, sizeof(command));
 }
-void start_pan(){
-	HAL_GPIO_WritePin(PAN_GPIO_Port,PAN_Pin,GPIO_PIN_SET);
+
+void start_fan(){
+	HAL_GPIO_WritePin(FAN_GPIO_Port,FAN_Pin,GPIO_PIN_SET);
 }
-void stop_pan(){
-	HAL_GPIO_WritePin(PAN_GPIO_Port,PAN_Pin,GPIO_PIN_RESET);
+void stop_fan(){
+	HAL_GPIO_WritePin(FAN_GPIO_Port,FAN_Pin,GPIO_PIN_RESET);
 }
 /* USER CODE END 0 */
 
@@ -217,36 +251,61 @@ int main(void)
   MX_TIM3_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+	Printf("RESET\r\n");
 	BSP_LED_Init(LED2);
 	HAL_TIM_Base_Start_IT(&htim7); // for 1sec interupt
 	HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_2); // for Servo Motor
 	HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3); // for Servo Motor
 	HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_4); // for Servo Motor
-	DFPlayer_Play_Track(1);
+	//DFPlayer_Play_Track(1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	DFPlayer_Play_Track(track++);
   while (1)
   {
+		control_wheel();
+			
+		if(is_open_sunroof || light_lux < 160) open_sunroof();
+		else close_sunroof();
+		
+		if(is_open_door) open_door();
+		else close_door();
+		
+		if(temperature > temp_user || temperature > 30 || humidity > 80) start_fan();
+		else stop_fan();
+		
 		if(it_1sec){
 			it_1sec = 0;
-			//BSP_LED_Toggle(LED2);
-			control_wheel(mode_input);
-			mode_input = (mode_input+1)%3;
-			if(!is_open){
-				is_open = 1;
-				open_door();
-				open_sunroof();
-				start_pan();
-			}
-			else{
-				is_open = 0;
-				close_door();
-				close_sunroof();
-				stop_pan();
-			}
+			DFPlayer_Play_Track(track++);
+			if(track==5) track = 1;
+			
+			//Dummy Data from system
+			temperature = (temperature + 3) % 50;
+			humidity = (humidity + 8) % 100;
+			light_lux = (light_lux + 30) % 326;
+			shock = (shock + 1) % 2;
+			potentiometer = (potentiometer + 10) % 326;
+			
+			//Dummy Data from user
+			is_open_door = (is_open_door + 1) % 2;
+			temp_user = (temp_user + 13) % 50;
+			is_open_sunroof = (is_open_sunroof + 1) % 2;
+			bluetooth = (bluetooth + 1) % 2;
 		}
+		/*
+		if(HAL_UART_Receive_IT(&huart4, (uint8_t *)FromEsp, FROMESPSIZE) != HAL_OK)
+		{
+			Error_Handler();
+		}
+		while (Uart4_Ready != SET)
+		{
+		}
+		
+		Printf("Data from ESP<%s> is received successfully.\r\n", FromEsp);
+		Uart4_Ready = RESET;
+		*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -459,7 +518,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(PAN_GPIO_Port, PAN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(FAN_GPIO_Port, FAN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -467,12 +526,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PAN_Pin */
-  GPIO_InitStruct.Pin = PAN_Pin;
+  /*Configure GPIO pin : FAN_Pin */
+  GPIO_InitStruct.Pin = FAN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(PAN_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(FAN_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -480,7 +539,26 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart->Instance == USART4)  // USART2 ????? ???? ?? ??
+	{
+		Uart4_Ready = SET;
+	}
+	if (huart->Instance == USART5)  // USART2 ????? ???? ?? ??
+	{
+		//HAL_UART_Receive_IT(&huart5, FromSensor, sizeof(FromSensor));  // ???? ?? ?? ??
+		Printf("Data from Sensor<%s> is received successfullyr\n", FromSensor);
+		Uart5_Ready = SET;
+	}
+}
 
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+	if (huart->Instance == USART4)  // USART2 ????? ???? ?? ??
+	{
+		//Printf("Data to ESP<%s> is sent successfully.\r\n", ToEsp);
+	}
+}
 /* USER CODE END 4 */
 
 /**

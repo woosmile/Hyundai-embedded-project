@@ -63,8 +63,8 @@ void Error_Handler(void);
 #define B1_GPIO_Port GPIOC
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
-#define PAN_Pin GPIO_PIN_5
-#define PAN_GPIO_Port GPIOA
+#define FAN_Pin GPIO_PIN_5
+#define FAN_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
