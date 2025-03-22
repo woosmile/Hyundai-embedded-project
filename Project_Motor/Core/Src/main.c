@@ -100,6 +100,19 @@ volatile uint32_t is_open_sunroof = 0;
 volatile uint32_t bluetooth = 0;
 
 volatile uint16_t track = 1;
+
+// Shock
+volatile int bVib = 0;
+
+// DHT11
+volatile int Temperature, Humidity;
+
+//Rotation
+volatile int rot;
+
+//Light
+volatile int light;
+
 #define FROMESPSIZE 6
 #define FROMSENSORSIZE 12
 #define TOESPSIZE 12
@@ -180,7 +193,7 @@ void control_wheel(uint32_t mode, uint32_t speed){
 }
 */
 void control_wheel(){
-		volatile int speed = ((int)potentiometer-160)/10;
+		volatile int speed = ((int)rot-160)/10;
 		direction = 76 + speed;
 		__HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2,direction);
 }
@@ -259,6 +272,41 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		break;
 	}
 }
+void dataInit(void) {
+	Temperature = 0;
+	Humidity = 0;
+	bVib = 0;
+	rot = 0;
+	light = 0;
+}
+
+void dataParsing(void) {
+	for (volatile int i = 0; i < 5; i++) {
+		volatile int digit = 100;
+		for (volatile int j = i * 3; j < (i * 3) + 3; j++) {
+			switch(i) {
+				case 0:
+					Temperature = Temperature + (aRxBuffer[j] * digit);
+					break ;
+				case 1:
+					Humidity = Humidity + (aRxBuffer[j] * digit);
+					break ;
+				case 2:
+					light = light + (aRxBuffer[j] * digit);
+					break ;
+				case 3:
+					bVib = bVib + (aRxBuffer[j] * digit);
+					break ;
+				case 4: 
+					rot = rot + (aRxBuffer[j] * digit);
+					break ;
+				default:
+					break ;
+			}
+			digit = digit / 10;
+		}
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -311,35 +359,6 @@ int main(void)
 	DFPlayer_Play_Track(track++);
   while (1)
   {
-		control_wheel();
-			
-		if(is_open_sunroof || light_lux < 160) open_sunroof();
-		else close_sunroof();
-		
-		if(is_open_door) open_door();
-		else close_door();
-		
-		if(temperature > temp_user || temperature > 30 || humidity > 80) start_fan();
-		else stop_fan();
-		
-		if(it_1sec){
-			it_1sec = 0;
-			DFPlayer_Play_Track(track++);
-			if(track==5) track = 1;
-			
-			//Dummy Data from system
-			temperature = (temperature + 3) % 50;
-			humidity = (humidity + 8) % 100;
-			light_lux = (light_lux + 30) % 326;
-			shock = (shock + 1) % 2;
-			potentiometer = (potentiometer + 10) % 326;
-			
-			//Dummy Data from user
-			is_open_door = (is_open_door + 1) % 2;
-			temp_user = (temp_user + 13) % 50;
-			is_open_sunroof = (is_open_sunroof + 1) % 2;
-			bluetooth = (bluetooth + 1) % 2;
-		}
 		if(HAL_UART_Transmit_IT(&huart5, &carStartup, 1)!= HAL_OK)
 		{
 			Error_Handler();
@@ -387,6 +406,40 @@ int main(void)
 		{
 		} 
 		Uart1_Ready = RESET;
+		
+		dataParsing();
+		
+		control_wheel();
+			
+		if(is_open_sunroof || light_lux < 160) open_sunroof();
+		else close_sunroof();
+		
+		if(is_open_door) open_door();
+		else close_door();
+		
+		if(Temperature > temp_user || Temperature > 30 || Humidity > 80) start_fan();
+		else stop_fan();
+		
+		if(it_1sec){
+			it_1sec = 0;
+			DFPlayer_Play_Track(track++);
+			if(track==5) track = 1;
+			
+			//Dummy Data from system
+			temperature = (temperature + 3) % 50;
+			humidity = (humidity + 8) % 100;
+			light_lux = (light_lux + 30) % 326;
+			shock = (shock + 1) % 2;
+			potentiometer = (potentiometer + 10) % 326;
+			
+			//Dummy Data from user
+			is_open_door = (is_open_door + 1) % 2;
+			temp_user = (temp_user + 13) % 50;
+			is_open_sunroof = (is_open_sunroof + 1) % 2;
+			bluetooth = (bluetooth + 1) % 2;
+		}
+		
+		dataInit();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
