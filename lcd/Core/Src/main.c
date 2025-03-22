@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include <string.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -42,6 +41,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart4;
+UART_HandleTypeDef huart5;
 
 /* USER CODE BEGIN PV */
 
@@ -57,6 +57,9 @@ volatile int rot;
 //Light
 volatile int light;
 
+//Car Startup
+uint8_t carStartup = 0;
+
 //LCD
 Lcd_HandleTypeDef lcd;
 
@@ -64,6 +67,7 @@ Lcd_HandleTypeDef lcd;
 uint8_t aRxBuffer[RXBUFFERSIZE];
 //Transmit Data Complete flag
 __IO ITStatus Uart4_Ready = RESET;
+__IO ITStatus Uart5_Ready = RESET;
 
 //Transmit receive Complete 
 uint8_t receiveComplete = 1;
@@ -77,6 +81,7 @@ char lcd_string[16];
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART4_UART_Init(void);
+static void MX_USART5_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -88,7 +93,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
   /* Set transmission flag: transfer complete */
 	if (UartHandle->Instance == USART4)
-		Uart4_Ready = SET; 
+		Uart4_Ready = SET;
+	else if (UartHandle->Instance == USART5)
+		Uart5_Ready = SET; 
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
@@ -96,6 +103,8 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
   /* Set transmission flag: transfer complete */
 	if (UartHandle->Instance == USART4)
 		Uart4_Ready = SET;
+	else if (UartHandle->Instance == USART5)
+		Uart5_Ready = SET;
 }
 
 void dataInit(void) {
@@ -123,7 +132,7 @@ void dataParsing(void) {
 				case 3:
 					bVib = bVib + (aRxBuffer[j] * digit);
 					break ;
-				case 4:
+				case 4: 
 					rot = rot + (aRxBuffer[j] * digit);
 					break ;
 				default:
@@ -162,6 +171,8 @@ void lcdPrint(void) {
 		}
 	}
 	Lcd_int(&lcd, light);
+	Lcd_cursor(&lcd, 1, 13);
+	Lcd_int(&lcd, carStartup);
 }
 
 /* USER CODE END 0 */
@@ -196,6 +207,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART4_UART_Init();
+  MX_USART5_UART_Init();
   /* USER CODE BEGIN 2 */
 	
 	// Lcd_PortType ports[] = { D4_GPIO_Port, D5_GPIO_Port, D6_GPIO_Port, D7_GPIO_Port };
@@ -221,6 +233,16 @@ int main(void)
 		} 
 		Uart4_Ready = RESET;
 		
+		if(HAL_UART_Receive_IT(&huart5, &carStartup, 1) != HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		while (Uart5_Ready != SET)
+		{
+		} 
+		Uart5_Ready = RESET;
+		
 		dataParsing();
 		lcdPrint();
 		dataInit();
@@ -234,6 +256,16 @@ int main(void)
 		{
 		} 
 		Uart4_Ready = RESET;
+		
+		if(HAL_UART_Transmit_IT(&huart5, &receiveComplete, 1)!= HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		while (Uart5_Ready != SET)
+		{
+		} 
+		Uart5_Ready = RESET;
 		
     /* USER CODE END WHILE */
 
@@ -319,6 +351,41 @@ static void MX_USART4_UART_Init(void)
 }
 
 /**
+  * @brief USART5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART5_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART5_Init 0 */
+
+  /* USER CODE END USART5_Init 0 */
+
+  /* USER CODE BEGIN USART5_Init 1 */
+
+  /* USER CODE END USART5_Init 1 */
+  huart5.Instance = USART5;
+  huart5.Init.BaudRate = 9600;
+  huart5.Init.WordLength = UART_WORDLENGTH_8B;
+  huart5.Init.StopBits = UART_STOPBITS_1;
+  huart5.Init.Parity = UART_PARITY_NONE;
+  huart5.Init.Mode = UART_MODE_TX_RX;
+  huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart5.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart5.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart5.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART5_Init 2 */
+
+  /* USER CODE END USART5_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -334,6 +401,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LCD1602_D6_Pin|LCD1602_D5_Pin|LCD1602_D4_Pin, GPIO_PIN_RESET);
