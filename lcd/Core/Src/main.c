@@ -41,13 +41,39 @@
 
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart4;
+UART_HandleTypeDef huart5;
 
 /* USER CODE BEGIN PV */
 
-//Transmit Data Buffer
+// Shock
+volatile int bVib = 0;
+
+// DHT11
+volatile int Temperature, Humidity;
+
+//Rotation
+volatile int rot;
+
+//Light
+volatile int light;
+
+//Car Startup
+uint8_t carStartup = 0;
+
+//LCD
+Lcd_HandleTypeDef lcd;
+
+//Receive Data Buffer
 uint8_t aRxBuffer[RXBUFFERSIZE];
 //Transmit Data Complete flag
 __IO ITStatus Uart4_Ready = RESET;
+__IO ITStatus Uart5_Ready = RESET;
+
+//Transmit receive Complete 
+uint8_t receiveComplete = 1;
+
+//LCD String
+char lcd_string[16];
 
 /* USER CODE END PV */
 
@@ -55,6 +81,7 @@ __IO ITStatus Uart4_Ready = RESET;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART4_UART_Init(void);
+static void MX_USART5_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -66,7 +93,86 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
   /* Set transmission flag: transfer complete */
 	if (UartHandle->Instance == USART4)
-		Uart4_Ready = SET; 
+		Uart4_Ready = SET;
+	else if (UartHandle->Instance == USART5)
+		Uart5_Ready = SET; 
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+  /* Set transmission flag: transfer complete */
+	if (UartHandle->Instance == USART4)
+		Uart4_Ready = SET;
+	else if (UartHandle->Instance == USART5)
+		Uart5_Ready = SET;
+}
+
+void dataInit(void) {
+	Temperature = 0;
+	Humidity = 0;
+	bVib = 0;
+	rot = 0;
+	light = 0;
+}
+
+void dataParsing(void) {
+	for (volatile int i = 0; i < 5; i++) {
+		volatile int digit = 100;
+		for (volatile int j = i * 3; j < (i * 3) + 3; j++) {
+			switch(i) {
+				case 0:
+					Temperature = Temperature + (aRxBuffer[j] * digit);
+					break ;
+				case 1:
+					Humidity = Humidity + (aRxBuffer[j] * digit);
+					break ;
+				case 2:
+					light = light + (aRxBuffer[j] * digit);
+					break ;
+				case 3:
+					bVib = bVib + (aRxBuffer[j] * digit);
+					break ;
+				case 4: 
+					rot = rot + (aRxBuffer[j] * digit);
+					break ;
+				default:
+					break ;
+			}
+			digit = digit / 10;
+		}
+	}
+}
+
+void lcdPrint(void) {
+	sprintf(lcd_string, "T:%d%cC H:%d%% S:%d", Temperature, 223, Humidity, bVib);
+	
+	Lcd_cursor(&lcd, 0, 0);
+	Lcd_string(&lcd, lcd_string);
+	
+	Lcd_cursor(&lcd, 1, 0);
+	Lcd_string(&lcd, "V:");
+	Lcd_int(&lcd, rot);
+	if (rot < 100) {
+		Lcd_cursor(&lcd, 1, 4);
+		lcd_write_data(&lcd, 32);
+		if (rot < 10) {
+			Lcd_cursor(&lcd, 1, 3);
+			lcd_write_data(&lcd, 32);
+		}
+	}
+	Lcd_cursor(&lcd, 1, 7);
+	Lcd_string(&lcd, "B:");
+	if (light < 100) {
+		Lcd_cursor(&lcd, 1, 11);
+		lcd_write_data(&lcd, 32);
+		if (light < 10) {
+			Lcd_cursor(&lcd, 1, 10);
+			lcd_write_data(&lcd, 32);
+		}
+	}
+	Lcd_int(&lcd, light);
+	Lcd_cursor(&lcd, 1, 13);
+	Lcd_int(&lcd, carStartup);
 }
 
 /* USER CODE END 0 */
@@ -101,22 +207,20 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART4_UART_Init();
+  MX_USART5_UART_Init();
   /* USER CODE BEGIN 2 */
 	
 	// Lcd_PortType ports[] = { D4_GPIO_Port, D5_GPIO_Port, D6_GPIO_Port, D7_GPIO_Port };
   Lcd_PortType ports[] = { D4_5_6_PORT, D4_5_6_PORT, D4_5_6_PORT, D7_PORT };
   // Lcd_PinType pins[] = {D4_Pin, D5_Pin, D6_Pin, D7_Pin};
   Lcd_PinType pins[] = {D4, D5, D6, D7};
-  Lcd_HandleTypeDef lcd;
   // Lcd_create(ports, pins, RS_GPIO_Port, RS_Pin, EN_GPIO_Port, EN_Pin, LCD_4_BIT_MODE);
   lcd = Lcd_create(ports, pins, RS_PORT, RS, E_PORT, E, LCD_4_BIT_MODE);
-  Lcd_cursor(&lcd, 0, 0);
-  Lcd_string(&lcd, "Hello World!!");
-	
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	
   while (1)
   {
 		if(HAL_UART_Receive_IT(&huart4, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
@@ -126,15 +230,42 @@ int main(void)
 		
 		while (Uart4_Ready != SET)
 		{
-
 		} 
 		Uart4_Ready = RESET;
 		
-		for (volatile int i = 0; i < 15; i++)
+		if(HAL_UART_Receive_IT(&huart5, &carStartup, 1) != HAL_OK)
 		{
-			Lcd_cursor(&lcd, 1, i);
-			Lcd_int(&lcd, aRxBuffer[i]);
+			Error_Handler();
 		}
+		
+		while (Uart5_Ready != SET)
+		{
+		} 
+		Uart5_Ready = RESET;
+		
+		dataParsing();
+		lcdPrint();
+		dataInit();
+
+		if(HAL_UART_Transmit_IT(&huart4, &receiveComplete, 1)!= HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		while (Uart4_Ready != SET)
+		{
+		} 
+		Uart4_Ready = RESET;
+		
+		if(HAL_UART_Transmit_IT(&huart5, &receiveComplete, 1)!= HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		while (Uart5_Ready != SET)
+		{
+		} 
+		Uart5_Ready = RESET;
 		
     /* USER CODE END WHILE */
 
@@ -220,6 +351,41 @@ static void MX_USART4_UART_Init(void)
 }
 
 /**
+  * @brief USART5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART5_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART5_Init 0 */
+
+  /* USER CODE END USART5_Init 0 */
+
+  /* USER CODE BEGIN USART5_Init 1 */
+
+  /* USER CODE END USART5_Init 1 */
+  huart5.Instance = USART5;
+  huart5.Init.BaudRate = 9600;
+  huart5.Init.WordLength = UART_WORDLENGTH_8B;
+  huart5.Init.StopBits = UART_STOPBITS_1;
+  huart5.Init.Parity = UART_PARITY_NONE;
+  huart5.Init.Mode = UART_MODE_TX_RX;
+  huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart5.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart5.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart5.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART5_Init 2 */
+
+  /* USER CODE END USART5_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -235,6 +401,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LCD1602_D6_Pin|LCD1602_D5_Pin|LCD1602_D4_Pin, GPIO_PIN_RESET);
