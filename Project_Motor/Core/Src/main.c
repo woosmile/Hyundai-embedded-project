@@ -34,7 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define RXBUFFERSIZE 15
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -43,13 +43,28 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+UART_HandleTypeDef hlpuart1;
+UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart4;
+UART_HandleTypeDef huart5;
+
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim7;
 
-UART_HandleTypeDef huart1;
-
 /* USER CODE BEGIN PV */
+//Receive Data Buffer
+uint8_t aRxBuffer[RXBUFFERSIZE];
+//Transmit Data Complete flag
+__IO ITStatus Uart1_Ready = RESET;
+__IO ITStatus Uart5_Ready = RESET;
+//Transmit receive Complete 
+uint8_t receiveComplete = 1;
 
+//Transmit Car Startup
+uint8_t carStartup = 0;
+
+//Receive Check Buffer
+uint8_t checkReceive;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,6 +73,9 @@ static void MX_GPIO_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_LPUART1_UART_Init(void);
+static void MX_USART4_UART_Init(void);
+static void MX_USART5_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -85,9 +103,8 @@ volatile uint16_t track = 1;
 #define FROMESPSIZE 6
 #define FROMSENSORSIZE 12
 #define TOESPSIZE 12
-__IO ITStatus Uart1_Ready = RESET;
 __IO ITStatus Uart4_Ready = RESET;
-__IO ITStatus Uart5_Ready = RESET;
+
 uint8_t FromEsp[FROMESPSIZE];
 uint8_t FromSensor[FROMSENSORSIZE];
 uint8_t ToEsp[TOESPSIZE];
@@ -169,7 +186,7 @@ void control_wheel(){
 }
 void DFPlayer_Send_Command(uint8_t* command, uint8_t length)
 {
-    HAL_UART_Transmit(&huart1, command, length, HAL_MAX_DELAY);
+    HAL_UART_Transmit(&hlpuart1, command, length, HAL_MAX_DELAY);
 }
 
 void DFPlayer_Play_Track(uint16_t track_number)
@@ -216,6 +233,32 @@ void start_fan(){
 void stop_fan(){
 	HAL_GPIO_WritePin(FAN_GPIO_Port,FAN_Pin,GPIO_PIN_RESET);
 }
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+  /* Set transmission flag: transfer complete */
+	if (UartHandle->Instance == USART1)
+		Uart1_Ready = SET;
+	if (UartHandle->Instance == USART5)
+		Uart5_Ready = SET;
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+  /* Set transmission flag: transfer complete */
+	if (UartHandle->Instance == USART1)
+		Uart1_Ready = SET;
+	if (UartHandle->Instance == USART5)
+		Uart5_Ready = SET;
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	switch(GPIO_Pin) {
+		case USER_BUTTON_PIN:
+			carStartup = !carStartup;
+			BSP_LED_Toggle(LED2);
+		break;
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -250,6 +293,9 @@ int main(void)
   MX_TIM7_Init();
   MX_TIM3_Init();
   MX_USART1_UART_Init();
+  MX_LPUART1_UART_Init();
+  MX_USART4_UART_Init();
+  MX_USART5_UART_Init();
   /* USER CODE BEGIN 2 */
 	Printf("RESET\r\n");
 	BSP_LED_Init(LED2);
@@ -294,18 +340,53 @@ int main(void)
 			is_open_sunroof = (is_open_sunroof + 1) % 2;
 			bluetooth = (bluetooth + 1) % 2;
 		}
-		/*
-		if(HAL_UART_Receive_IT(&huart4, (uint8_t *)FromEsp, FROMESPSIZE) != HAL_OK)
+		if(HAL_UART_Transmit_IT(&huart5, &carStartup, 1)!= HAL_OK)
 		{
 			Error_Handler();
 		}
-		while (Uart4_Ready != SET)
+		
+		while (Uart5_Ready != SET)
 		{
+		} 
+		Uart5_Ready = RESET;
+		
+		if(HAL_UART_Receive_IT(&huart5, &checkReceive, 1) != HAL_OK)
+		{
+			Error_Handler();
 		}
 		
-		Printf("Data from ESP<%s> is received successfully.\r\n", FromEsp);
-		Uart4_Ready = RESET;
-		*/
+		/*##-5- Wait for the end of the transfer ###################################*/   
+		while (Uart5_Ready != SET)
+		{
+		} 
+		
+		/* Reset transmission flag */
+		Uart5_Ready = RESET;
+		
+		if(HAL_UART_Receive_IT(&huart1, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		while (Uart1_Ready != SET)
+		{
+		} 
+		Uart1_Ready = RESET;
+		
+		for (volatile int i = 0; i < 15; i++) {
+			Printf("%d", aRxBuffer[i]);
+		}
+		Printf("\r\n");
+
+		if(HAL_UART_Transmit_IT(&huart1, &receiveComplete, 1)!= HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		while (Uart1_Ready != SET)
+		{
+		} 
+		Uart1_Ready = RESET;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -351,12 +432,152 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_LPUART1;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+  PeriphClkInit.Lpuart1ClockSelection = RCC_LPUART1CLKSOURCE_PCLK1;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief LPUART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_LPUART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN LPUART1_Init 0 */
+
+  /* USER CODE END LPUART1_Init 0 */
+
+  /* USER CODE BEGIN LPUART1_Init 1 */
+
+  /* USER CODE END LPUART1_Init 1 */
+  hlpuart1.Instance = LPUART1;
+  hlpuart1.Init.BaudRate = 9600;
+  hlpuart1.Init.WordLength = UART_WORDLENGTH_8B;
+  hlpuart1.Init.StopBits = UART_STOPBITS_1;
+  hlpuart1.Init.Parity = UART_PARITY_NONE;
+  hlpuart1.Init.Mode = UART_MODE_TX_RX;
+  hlpuart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  hlpuart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  hlpuart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&hlpuart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN LPUART1_Init 2 */
+
+  /* USER CODE END LPUART1_Init 2 */
+
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 9600;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
+  * @brief USART4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART4_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART4_Init 0 */
+
+  /* USER CODE END USART4_Init 0 */
+
+  /* USER CODE BEGIN USART4_Init 1 */
+
+  /* USER CODE END USART4_Init 1 */
+  huart4.Instance = USART4;
+  huart4.Init.BaudRate = 9600;
+  huart4.Init.WordLength = UART_WORDLENGTH_8B;
+  huart4.Init.StopBits = UART_STOPBITS_1;
+  huart4.Init.Parity = UART_PARITY_NONE;
+  huart4.Init.Mode = UART_MODE_TX_RX;
+  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART4_Init 2 */
+
+  /* USER CODE END USART4_Init 2 */
+
+}
+
+/**
+  * @brief USART5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART5_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART5_Init 0 */
+
+  /* USER CODE END USART5_Init 0 */
+
+  /* USER CODE BEGIN USART5_Init 1 */
+
+  /* USER CODE END USART5_Init 1 */
+  huart5.Instance = USART5;
+  huart5.Init.BaudRate = 9600;
+  huart5.Init.WordLength = UART_WORDLENGTH_8B;
+  huart5.Init.StopBits = UART_STOPBITS_1;
+  huart5.Init.Parity = UART_PARITY_NONE;
+  huart5.Init.Mode = UART_MODE_TX_RX;
+  huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart5.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart5.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart5.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART5_Init 2 */
+
+  /* USER CODE END USART5_Init 2 */
+
 }
 
 /**
@@ -465,41 +686,6 @@ static void MX_TIM7_Init(void)
 }
 
 /**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -516,15 +702,16 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(FAN_GPIO_Port, FAN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
+  /*Configure GPIO pin : USER_BUTTON_Pin */
+  GPIO_InitStruct.Pin = USER_BUTTON_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(USER_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : FAN_Pin */
   GPIO_InitStruct.Pin = FAN_Pin;
@@ -533,32 +720,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(FAN_GPIO_Port, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-	if (huart->Instance == USART4)  // USART2 ????? ???? ?? ??
-	{
-		Uart4_Ready = SET;
-	}
-	if (huart->Instance == USART5)  // USART2 ????? ???? ?? ??
-	{
-		//HAL_UART_Receive_IT(&huart5, FromSensor, sizeof(FromSensor));  // ???? ?? ?? ??
-		Printf("Data from Sensor<%s> is received successfullyr\n", FromSensor);
-		Uart5_Ready = SET;
-	}
-}
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-	if (huart->Instance == USART4)  // USART2 ????? ???? ?? ??
-	{
-		//Printf("Data to ESP<%s> is sent successfully.\r\n", ToEsp);
-	}
-}
 /* USER CODE END 4 */
 
 /**
