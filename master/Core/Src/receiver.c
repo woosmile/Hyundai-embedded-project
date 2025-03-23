@@ -8,19 +8,21 @@
 //RX callback function
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	//UART4: FromEsp
-	if (huart->Instance == USART4)
-	{
-		Printf("Received Data: %s\r\n", FromEsp);
-		//ready to receive data one more time
-		HAL_UART_Receive_IT(&huart4, (uint8_t*)FromEsp, FROMESPSIZE);
+	if (huart->Instance == USART4) {
+		__IO ITStatus Uart4R_Ready = SET;
 	}
-	
-	//UART5: FromSensor
-	if (huart->Instance == USART5)  // USART4?? ??? ??
-	{
-			Printf("Received Data: %s\r\n", FromSensor);
-		//ready to receive data one more time
-		HAL_UART_Receive_IT(&huart5, (uint8_t*)FromSensor, FROMSENSORSIZE);
+	HAL_UART_Receive_IT(&huart4, (uint8_t*)FromTop, FROMTOPSIZE);
+}
+
+
+void receiveData(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size){
+	if(HAL_UART_Receive(huart, pData, Size, 200) == HAL_OK){
+		if(huart == &huart4){
+			Printf("(To Top)");
+		}
+		if(huart == &huart5){
+			Printf("(To Bot)");
+		}
+		Printf("receive data success: %s\r\n", pData);
 	}
 }

@@ -28,6 +28,7 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+void force_uart_rx_check();
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

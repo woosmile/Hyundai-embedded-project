@@ -39,17 +39,15 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 __IO ITStatus Uart4T_Ready = RESET;
+__IO ITStatus Uart5T_Ready = RESET;
 __IO ITStatus Uart4R_Ready = RESET;
 __IO ITStatus Uart5R_Ready = RESET;
-uint8_t ToEsp[TOESPSIZE] = {'#', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '$'};
-uint8_t FromEsp[FROMESPSIZE];
-uint8_t FromSensor[FROMSENSORSIZE];
+uint8_t ToTop[TOTOPSIZE] = {'#', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '$'};
+uint8_t FromTop[FROMTOPSIZE];
+uint8_t ToBot[TOBOTSIZE] = {'#', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '$'};
+uint8_t FromBot[TOBOTSIZE];
 volatile uint32_t	it_1sec_uart = 0;
 volatile uint32_t isTransmitting = 0;
-TIM_HandleTypeDef htim6;  // ??? ??? ??
-UART_HandleTypeDef huart2;  // USART2 ??? ??
-UART_HandleTypeDef huart4;  // USART4 ??? ??
-UART_HandleTypeDef huart5;  // USART5 ??? ??
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -120,21 +118,46 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-	//CMD_Init();
+	CMD_Init();
 	HAL_TIM_Base_Start_IT(&htim6);
 	//HAL_UART_Receive_IT(&huart5, FromSensor, sizeof(FromSensor));  // ???? ?? ?? ??
-	Printf("START\r\n");
-	HAL_UART_Receive_IT(&huart4, (uint8_t*)FromEsp, FROMESPSIZE);
+	Printf("START master\r\n");
+	//HAL_UART_Receive_IT(&huart4, (uint8_t*)FromEsp, FROMESPSIZE);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		//UART4 TX(ESP)
-		//if(it_1sec_uart == 1){
-		//	transmitdata();
-		//}
+		/*
+		//If you want to be ESP
+		if(it_1sec_uart == 1){
+			transmitdata();
+		}
+		*/
+//it must end in 2 secs
+	//receive from ESP
+		//RXcallback intrpt for ESP on
+		if(Uart4R_Ready == SET){
+			Uart4R_Ready = RESET;
+			Printf("receive data from ESP success: %s\r\n", FromTop);
+			//transmit to ESP
+			transmitData(&huart4, ToTop, TOTOPSIZE);
+			
+			//not for sensor board
+			//transmit to sensor
+			transmitData(&huart5, ToBot, TOBOTSIZE);
+			//receive from sensor
+			receiveData(&huart5, FromBot, TOBOTSIZE);
+		}
+		//process data
+		
+		/*
+		//Like ESP
+		if(it_1sec_uart == 1){
+			transmitdata();
+		}
+		*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -159,10 +182,8 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
-  RCC_OscInitStruct.MSIState = RCC_MSI_ON;
-  RCC_OscInitStruct.MSICalibrationValue = 0;
-  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_5;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -173,7 +194,7 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
@@ -373,7 +394,26 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/*void MX_NVIC_Init(void)
+{
+    // TIM6
+    //HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 0, 0);
+    //HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
 
+    // USART4 transmit
+    HAL_NVIC_SetPriority(USART1_IRQn, 1, 0);
+    HAL_NVIC_EnableIRQ(USART4_5_IRQn);
+
+    // USART1 receive
+    HAL_NVIC_SetPriority(USART4_5_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(USART1_IRQn);
+}*/
+
+int _write(int file, char *ptr, int len)
+{
+  HAL_UART_Transmit(&huart2, (uint8_t *)ptr, len, HAL_MAX_DELAY);
+  return len;
+}
 /* USER CODE END 4 */
 
 /**

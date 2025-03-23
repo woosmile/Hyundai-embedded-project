@@ -27,6 +27,7 @@ extern "C" {
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
+void receiveData(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 /* USER CODE BEGIN EFP */
 
