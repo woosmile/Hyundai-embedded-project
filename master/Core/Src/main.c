@@ -129,12 +129,16 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		/*
-		//If you want to be ESP
+//As ESP
 		if(it_1sec_uart == 1){
-			transmitdata();
+			//transmit to sensor
+			transmitData(&huart4, ToBot, TOBOTSIZE);
+			//receive from sensor
+			receiveData(&huart4, FromBot, TOBOTSIZE);
+			it_1sec_uart = 0;
 		}
-		*/
+/*
+//As MASTER
 //it must end in 2 secs
 	//receive from ESP
 		//RXcallback intrpt for ESP on
@@ -150,6 +154,7 @@ int main(void)
 			//receive from sensor
 			receiveData(&huart5, FromBot, TOBOTSIZE);
 		}
+*/
 		//process data
 		
 		/*
@@ -182,8 +187,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.MSIState = RCC_MSI_ON;
+  RCC_OscInitStruct.MSICalibrationValue = 0;
+  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_5;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -194,7 +201,7 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;

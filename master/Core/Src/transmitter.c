@@ -6,7 +6,7 @@
 #include "stm32l0xx_nucleo.h"
 
 void transmitData(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size){
-	if(HAL_UART_Transmit(huart, pData, Size, 100) == HAL_OK){
+	if(HAL_UART_Transmit(huart, pData, Size, 200) == HAL_OK){
 		if(huart == &huart4){
 			Printf("(To Top)");
 		}
@@ -14,5 +14,8 @@ void transmitData(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size){
 			Printf("(To Bot)");
 		}
 		Printf("send data success: %s\r\n", pData);
+	}
+	else{
+		Printf("timeout in sending data\r\n");
 	}
 }

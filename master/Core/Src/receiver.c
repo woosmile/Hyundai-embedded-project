@@ -16,13 +16,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 
 void receiveData(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size){
-	if(HAL_UART_Receive(huart, pData, Size, 200) == HAL_OK){
+	if(HAL_UART_Receive(huart, pData, Size, 400) == HAL_OK){
 		if(huart == &huart4){
-			Printf("(To Top)");
+			Printf("(From Top)");
 		}
 		if(huart == &huart5){
-			Printf("(To Bot)");
+			Printf("(From Bot)");
 		}
 		Printf("receive data success: %s\r\n", pData);
+	}
+	else{
+		Printf("timeout in receiving data\r\n");
 	}
 }
