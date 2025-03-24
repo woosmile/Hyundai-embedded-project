@@ -7,14 +7,15 @@
 
 void transmitData(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size){
 	if(HAL_UART_Transmit(huart, pData, Size, 200) == HAL_OK){
-		// if(huart == &huart4){
-		// 	Printf("(To Top)");
-		// }
-		// else if(huart == &huart5){
-		// 	Printf("(To Bot)");
-		// }
+		if(huart == &huart4){
+			Printf("(To ESP)");
+		}
+		else if(huart == &huart5){
+			Printf("(To SENSOR)");
+		}
 		Printf("send data success: %s\r\n", pData);
 	}
+	
 	else{
 		Printf("timeout in sending data\r\n");
 	}

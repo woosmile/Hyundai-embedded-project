@@ -9,9 +9,9 @@
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart->Instance == USART4) {
-		__IO ITStatus Uart4R_Ready = SET;
+		Uart4R_Ready = SET;
+		HAL_UART_Receive_IT(&huart4, FromTop, FROMTOPSIZE);
 	}
-	HAL_UART_Receive_IT(&huart4, (uint8_t*)FromTop, FROMTOPSIZE);
 }
 
 
