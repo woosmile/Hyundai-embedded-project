@@ -32,6 +32,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define RXBUFFERSIZE 15
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -40,46 +41,34 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
 
 /* USER CODE BEGIN PV */
 
-// Shock
-volatile int bVib = 0;
-
-// DHT11
-volatile int Temperature, Humidity;
-
-//Rotation
-volatile int rot;
-
-//Light
-volatile int light;
-
-//Car Startup
-uint8_t carStartup = 0;
-
-//LCD
-Lcd_HandleTypeDef lcd;
-
 //Receive Data Buffer
 uint8_t aRxBuffer[RXBUFFERSIZE];
 //Transmit Data Complete flag
-__IO ITStatus Uart4_Ready = RESET;
+__IO ITStatus Uart1_Ready = RESET;
 __IO ITStatus Uart5_Ready = RESET;
-
 //Transmit receive Complete 
 uint8_t receiveComplete = 1;
 
-//LCD String
-char lcd_string[16];
+//Transmit Car Startup
+uint8_t carStartup = 0;
+
+//Receive Check Buffer
+uint8_t checkReceive;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_USART1_UART_Init(void);
+static void MX_USART2_UART_Init(void);
 static void MX_USART4_UART_Init(void);
 static void MX_USART5_UART_Init(void);
 /* USER CODE BEGIN PFP */
@@ -88,91 +77,31 @@ static void MX_USART5_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
   /* Set transmission flag: transfer complete */
-	if (UartHandle->Instance == USART4)
-		Uart4_Ready = SET;
-	else if (UartHandle->Instance == USART5)
-		Uart5_Ready = SET; 
+	if (UartHandle->Instance == USART1)
+		Uart1_Ready = SET;
+	if (UartHandle->Instance == USART5)
+		Uart5_Ready = SET;
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
   /* Set transmission flag: transfer complete */
-	if (UartHandle->Instance == USART4)
-		Uart4_Ready = SET;
-	else if (UartHandle->Instance == USART5)
+	if (UartHandle->Instance == USART1)
+		Uart1_Ready = SET;
+	if (UartHandle->Instance == USART5)
 		Uart5_Ready = SET;
 }
 
-void dataInit(void) {
-	Temperature = 0;
-	Humidity = 0;
-	bVib = 0;
-	rot = 0;
-	light = 0;
-}
-
-void dataParsing(void) {
-	for (volatile int i = 0; i < 5; i++) {
-		volatile int digit = 100;
-		for (volatile int j = i * 3; j < (i * 3) + 3; j++) {
-			switch(i) {
-				case 0:
-					Temperature = Temperature + (aRxBuffer[j] * digit);
-					break ;
-				case 1:
-					Humidity = Humidity + (aRxBuffer[j] * digit);
-					break ;
-				case 2:
-					light = light + (aRxBuffer[j] * digit);
-					break ;
-				case 3:
-					bVib = bVib + (aRxBuffer[j] * digit);
-					break ;
-				case 4: 
-					rot = rot + (aRxBuffer[j] * digit);
-					break ;
-				default:
-					break ;
-			}
-			digit = digit / 10;
-		}
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	switch(GPIO_Pin) {
+		case USER_BUTTON_PIN:
+			carStartup = !carStartup;
+			BSP_LED_Toggle(LED2);
+		break;
 	}
-}
-
-void lcdPrint(void) {
-	sprintf(lcd_string, "T:%d%cC H:%d%% S:%d", Temperature, 223, Humidity, bVib);
-	
-	Lcd_cursor(&lcd, 0, 0);
-	Lcd_string(&lcd, lcd_string);
-	
-	Lcd_cursor(&lcd, 1, 0);
-	Lcd_string(&lcd, "V:");
-	Lcd_int(&lcd, rot);
-	if (rot < 100) {
-		Lcd_cursor(&lcd, 1, 4);
-		lcd_write_data(&lcd, 32);
-		if (rot < 10) {
-			Lcd_cursor(&lcd, 1, 3);
-			lcd_write_data(&lcd, 32);
-		}
-	}
-	Lcd_cursor(&lcd, 1, 7);
-	Lcd_string(&lcd, "B:");
-	if (light < 100) {
-		Lcd_cursor(&lcd, 1, 11);
-		lcd_write_data(&lcd, 32);
-		if (light < 10) {
-			Lcd_cursor(&lcd, 1, 10);
-			lcd_write_data(&lcd, 32);
-		}
-	}
-	Lcd_int(&lcd, light);
-	Lcd_cursor(&lcd, 1, 13);
-	Lcd_int(&lcd, carStartup);
 }
 
 /* USER CODE END 0 */
@@ -206,34 +135,23 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
   MX_USART4_UART_Init();
   MX_USART5_UART_Init();
   /* USER CODE BEGIN 2 */
 	
-	// Lcd_PortType ports[] = { D4_GPIO_Port, D5_GPIO_Port, D6_GPIO_Port, D7_GPIO_Port };
-  Lcd_PortType ports[] = { D4_5_6_PORT, D4_5_6_PORT, D4_5_6_PORT, D7_PORT };
-  // Lcd_PinType pins[] = {D4_Pin, D5_Pin, D6_Pin, D7_Pin};
-  Lcd_PinType pins[] = {D4, D5, D6, D7};
-  // Lcd_create(ports, pins, RS_GPIO_Port, RS_Pin, EN_GPIO_Port, EN_Pin, LCD_4_BIT_MODE);
-  lcd = Lcd_create(ports, pins, RS_PORT, RS, E_PORT, E, LCD_4_BIT_MODE);
+	//Printf("Hello New World\r\n");
+	
+	BSP_LED_Init(LED2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	
   while (1)
   {
-		if(HAL_UART_Receive_IT(&huart4, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
-		{
-			Error_Handler();
-		}
-		
-		while (Uart4_Ready != SET)
-		{
-		} 
-		Uart4_Ready = RESET;
-		
-		if(HAL_UART_Receive_IT(&huart5, &carStartup, 1) != HAL_OK)
+		if(HAL_UART_Transmit_IT(&huart5, &carStartup, 1)!= HAL_OK)
 		{
 			Error_Handler();
 		}
@@ -243,29 +161,43 @@ int main(void)
 		} 
 		Uart5_Ready = RESET;
 		
-		dataParsing();
-		lcdPrint();
-		dataInit();
+		if(HAL_UART_Receive_IT(&huart5, &checkReceive, 1) != HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		/*##-5- Wait for the end of the transfer ###################################*/   
+		while (Uart5_Ready != SET)
+		{
+		} 
+		
+		/* Reset transmission flag */
+		Uart5_Ready = RESET;
+		
+		if(HAL_UART_Receive_IT(&huart1, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+		{
+			Error_Handler();
+		}
+		
+		while (Uart1_Ready != SET)
+		{
+		} 
+		Uart1_Ready = RESET;
+		
+		for (volatile int i = 0; i < 15; i++) {
+			Printf("%d", aRxBuffer[i]);
+		}
+		Printf("\r\n");
 
-		if(HAL_UART_Transmit_IT(&huart4, &receiveComplete, 1)!= HAL_OK)
+		if(HAL_UART_Transmit_IT(&huart1, &receiveComplete, 1)!= HAL_OK)
 		{
 			Error_Handler();
 		}
 		
-		while (Uart4_Ready != SET)
+		while (Uart1_Ready != SET)
 		{
 		} 
-		Uart4_Ready = RESET;
-		
-		if(HAL_UART_Transmit_IT(&huart5, &receiveComplete, 1)!= HAL_OK)
-		{
-			Error_Handler();
-		}
-		
-		while (Uart5_Ready != SET)
-		{
-		} 
-		Uart5_Ready = RESET;
+		Uart1_Ready = RESET;
 		
     /* USER CODE END WHILE */
 
@@ -282,6 +214,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Configure the main internal regulator output voltage
   */
@@ -313,6 +246,86 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_USART2;
+  PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 9600;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+	
+	HW_VCOM_Init(&huart2);
+#if 0
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 9600;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+#endif
+
+  /* USER CODE END USART2_Init 2 */
+
 }
 
 /**
@@ -394,54 +407,27 @@ static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
+
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LCD1602_D6_Pin|LCD1602_D5_Pin|LCD1602_D4_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LCD1602_E_GPIO_Port, LCD1602_E_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LCD1602_D7_Pin|LCD1602_RS_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pins : PA2 USART_RX_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|USART_RX_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  /*Configure GPIO pin : USER_BUTTON_Pin */
+  GPIO_InitStruct.Pin = USER_BUTTON_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF4_USART2;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(USER_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LCD1602_D6_Pin LCD1602_D5_Pin LCD1602_D4_Pin */
-  GPIO_InitStruct.Pin = LCD1602_D6_Pin|LCD1602_D5_Pin|LCD1602_D4_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : LCD1602_E_Pin */
-  GPIO_InitStruct.Pin = LCD1602_E_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LCD1602_E_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : LCD1602_D7_Pin LCD1602_RS_Pin */
-  GPIO_InitStruct.Pin = LCD1602_D7_Pin|LCD1602_RS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
+
   /* USER CODE END MX_GPIO_Init_2 */
 }
 

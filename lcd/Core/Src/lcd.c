@@ -10,7 +10,7 @@ const uint8_t ROW_16[] = {0x00, 0x40, 0x10, 0x50};
 const uint8_t ROW_20[] = {0x00, 0x40, 0x14, 0x54};
 /************************************** Static declarations **************************************/
 
-static void lcd_write_data(Lcd_HandleTypeDef * lcd, uint8_t data);
+void lcd_write_data(Lcd_HandleTypeDef * lcd, uint8_t data);
 static void lcd_write_command(Lcd_HandleTypeDef * lcd, uint8_t command);
 static void lcd_write(Lcd_HandleTypeDef * lcd, uint8_t data, uint8_t len);
 
