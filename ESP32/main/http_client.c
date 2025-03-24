@@ -40,7 +40,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 void http_get_request()
 {
     esp_http_client_config_t config = {
-        .url = "https://hyundai-app-cf6af1f123b1.herokuapp.com/",
+        .url = "https://hyundai-app-cf6af1f123b1.herokuapp.com/api/sensor",
         .event_handler = _http_event_handler,
         .cert_pem = HTTPS_CERT,
     };
@@ -55,6 +55,34 @@ void http_get_request()
     else
     {
         ESP_LOGE(TAG, "HTTPS GET 요청 실패: %s", esp_err_to_name(err));
+    }
+
+    esp_http_client_cleanup(client);
+}
+
+void http_post_request(const char *json_payload)
+{
+    esp_http_client_config_t config = {
+        .url = "https://hyundai-app-cf6af1f123b1.herokuapp.com/api/sensor",
+        .event_handler = _http_event_handler,
+        .cert_pem = HTTPS_CERT,
+    };
+
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+
+    esp_http_client_set_method(client, HTTP_METHOD_POST);
+    esp_http_client_set_header(client, "Content-Type", "application/json");
+    esp_http_client_set_post_field(client, json_payload, strlen(json_payload));
+
+    esp_err_t err = esp_http_client_perform(client);
+
+    if (err == ESP_OK)
+    {
+        ESP_LOGI(TAG, "HTTPS POST 요청 성공, 응답 코드: %d", esp_http_client_get_status_code(client));
+    }
+    else
+    {
+        ESP_LOGE(TAG, "HTTPS POST 요청 실패: %s", esp_err_to_name(err));
     }
 
     esp_http_client_cleanup(client);
