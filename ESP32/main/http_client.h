@@ -4,6 +4,6 @@
 #include "esp_err.h"
 
 void http_get_request();
-void http_post_request(const char *data);
+void http_post_request();
 
 #endif // HTTP_CLIENT_H

@@ -1,0 +1,2 @@
+dependencies:
+  esp_websocket_client: "^1.0.0"
