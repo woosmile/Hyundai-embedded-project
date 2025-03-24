@@ -7,12 +7,12 @@
 
 void transmitData(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size){
 	if(HAL_UART_Transmit(huart, pData, Size, 200) == HAL_OK){
-		if(huart == &huart4){
-			Printf("(To Top)");
-		}
-		else if(huart == &huart5){
-			Printf("(To Bot)");
-		}
+		// if(huart == &huart4){
+		// 	Printf("(To Top)");
+		// }
+		// else if(huart == &huart5){
+		// 	Printf("(To Bot)");
+		// }
 		Printf("send data success: %s\r\n", pData);
 	}
 	else{

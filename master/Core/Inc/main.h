@@ -87,10 +87,10 @@ void Error_Handler(void);
 #define TCK_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
-#define TOTOPSIZE 15
-#define FROMTOPSIZE 15
-#define TOBOTSIZE 15
-#define FROMBOTSIZE 15
+#define TOTOPSIZE 128
+#define FROMTOPSIZE 128
+#define TOBOTSIZE 128
+#define FROMBOTSIZE 128
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

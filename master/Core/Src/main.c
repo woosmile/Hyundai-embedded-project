@@ -44,7 +44,7 @@ __IO ITStatus Uart4R_Ready = RESET;
 __IO ITStatus Uart5R_Ready = RESET;
 uint8_t ToTop[TOTOPSIZE] = {'#', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '$'};
 uint8_t FromTop[FROMTOPSIZE];
-uint8_t ToBot[TOBOTSIZE] = {'#', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '$'};
+uint8_t ToBot[TOBOTSIZE] = "test_data";
 uint8_t FromBot[TOBOTSIZE];
 volatile uint32_t	it_1sec_uart = 0;
 volatile uint32_t isTransmitting = 0;
@@ -130,31 +130,33 @@ int main(void)
   while (1)
   {
 //As ESP
-		if(it_1sec_uart == 1){
-			//transmit to sensor
-			transmitData(&huart4, ToBot, TOBOTSIZE);
-			//receive from sensor
-			receiveData(&huart4, FromBot, TOBOTSIZE);
-			it_1sec_uart = 0;
-		}
-/*
+		// if(it_1sec_uart == 1){
+		// 	//transmit to sensor
+		// 	transmitData(&huart4, ToBot, TOBOTSIZE);
+		// 	//receive from sensor
+		// 	receiveData(&huart4, FromBot, TOBOTSIZE);
+		// 	it_1sec_uart = 0;
+		// }
 //As MASTER
 //it must end in 2 secs
 	//receive from ESP
 		//RXcallback intrpt for ESP on
-		if(Uart4R_Ready == SET){
-			Uart4R_Ready = RESET;
-			Printf("receive data from ESP success: %s\r\n", FromTop);
-			//transmit to ESP
-			transmitData(&huart4, ToTop, TOTOPSIZE);
+		// if(Uart4R_Ready == SET){
+		// 	Uart4R_Ready = RESET;
+		// 	Printf("receive data from ESP success: %s\r\n", FromTop);
+		// 	//transmit to ESP
+		// 	transmitData(&huart4, ToTop, TOTOPSIZE);
 			
-			//not for sensor board
-			//transmit to sensor
-			transmitData(&huart5, ToBot, TOBOTSIZE);
-			//receive from sensor
-			receiveData(&huart5, FromBot, TOBOTSIZE);
-		}
-*/
+		// 	//not for sensor board
+		// 	//transmit to sensor
+		// 	transmitData(&huart5, ToBot, TOBOTSIZE);
+		// 	//receive from sensor
+		// 	receiveData(&huart5, FromBot, TOBOTSIZE);
+		// }
+    if(it_1sec_uart){
+      transmitData(&huart4, ToBot, TOBOTSIZE);
+    }
+
 		//process data
 		
 		/*
@@ -416,12 +418,6 @@ static void MX_GPIO_Init(void)
     HAL_NVIC_EnableIRQ(USART1_IRQn);
 }*/
 
-int _write(int file, char *ptr, int len)
-{
-  HAL_UART_Transmit(&huart2, (uint8_t *)ptr, len, HAL_MAX_DELAY);
-  return len;
-}
-/* USER CODE END 4 */
 
 /**
   * @brief  This function is executed in case of error occurrence.
