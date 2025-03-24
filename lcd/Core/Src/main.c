@@ -144,7 +144,7 @@ void dataParsing(void) {
 }
 
 void lcdPrint(void) {
-	sprintf(lcd_string, "T:%d%cC H:%d%% S:%d", Temperature, 223, Humidity, bVib);
+	sprintf(lcd_string, "S:%d T:%d%cC H:%d%%", carStartup, Temperature, 223, Humidity);
 	
 	Lcd_cursor(&lcd, 0, 0);
 	Lcd_string(&lcd, lcd_string);
@@ -160,19 +160,19 @@ void lcdPrint(void) {
 			lcd_write_data(&lcd, 32);
 		}
 	}
-	Lcd_cursor(&lcd, 1, 7);
-	Lcd_string(&lcd, "B:");
-	if (light < 100) {
-		Lcd_cursor(&lcd, 1, 11);
+	Lcd_cursor(&lcd, 1, 6);
+	Lcd_string(&lcd, "L:");
+	Lcd_cursor(&lcd, 1, 8);
+	if (light > 206)
+	{
+		Lcd_string(&lcd, "Dark");
+		Lcd_cursor(&lcd, 1, 12);
 		lcd_write_data(&lcd, 32);
-		if (light < 10) {
-			Lcd_cursor(&lcd, 1, 10);
-			lcd_write_data(&lcd, 32);
-		}
+		Lcd_cursor(&lcd, 1, 13);
+		lcd_write_data(&lcd, 32);
 	}
-	Lcd_int(&lcd, light);
-	Lcd_cursor(&lcd, 1, 13);
-	Lcd_int(&lcd, carStartup);
+	else
+		Lcd_string(&lcd, "Bright");
 }
 
 /* USER CODE END 0 */
