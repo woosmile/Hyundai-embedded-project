@@ -69,7 +69,7 @@ uint8_t checkReceive;
 // Transmit data to ESP
 uint8_t TxESP[TX_ESP_DATA_SIZE];
 // Receive data from ESP
-uint8_t RxESP[RX_ESP_DATA_SIZE];
+uint8_t RxESP;
 // Receive data from Sensor
 uint8_t RxSensor[RX_SENSOR_DATA_SIZE];
 
@@ -253,7 +253,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 		Uart4_Ready = SET;
 		
 		//Receive data from ESP
-		HAL_UART_Receive_IT(&huart4, RxESP, RX_ESP_DATA_SIZE);
+		HAL_UART_Receive_IT(&huart4, &RxESP, RX_ESP_DATA_SIZE);
 	}
 }
 
@@ -274,6 +274,21 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		break;
 	}
 }
+
+void transmitData(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size){
+	if(HAL_UART_Transmit(huart, pData, Size, 200) == HAL_OK){
+		if(huart == &huart4){
+			Printf("Transmit to ESP Success: ");
+		}
+		for (volatile int i = 0; i <= 30; i++)
+			Printf("%d", pData[i]);
+		Printf("\r\n");
+	}
+	else{
+		Printf("Timeout Transmit to ESP\r\n");
+	}
+}
+
 void dataInit(void) {
 	Temperature = 0;
 	Humidity = 0;
@@ -324,20 +339,9 @@ void combineTxESP(void) {
 	}
 }
 
-
-void transmitData(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size){
-	if(HAL_UART_Transmit(huart, pData, Size, 200) == HAL_OK){
-		if(huart == &huart4){
-			Printf("(To ESP)");
-		}
-		Printf("send data success: ");
-		for (volatile int i = 0; i <= 30; i++)
-			Printf("%d", pData[i]);
-		Printf("\r\n");
-	}
-	else{
-		Printf("timeout in sending data\r\n");
-	}
+void controlActuator(void) {
+	if (RxESP == '0')
+		carStartup = 1;
 }
 
 /* USER CODE END 0 */
@@ -492,7 +496,8 @@ int main(void)
 		if(Uart4_Ready == SET){
 			Uart4_Ready = RESET;
 			//data process with fromtop
-			Printf("(From Top)receive data success: %s\r\n", RxESP);
+			Printf("Receive from ESP Success: %c\r\n", RxESP);
+			controlActuator();
     }
 		
 		dataInit();
