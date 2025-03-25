@@ -34,7 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define TX_ESP_DATA_SIZE 128
+#define TX_ESP_DATA_SIZE 31
 #define RX_ESP_DATA_SIZE 1   // Output Actuator Control
 #define RX_SENSOR_DATA_SIZE 15
 /* USER CODE END PD */
@@ -474,7 +474,7 @@ int main(void)
 			it_1sec = 0;
 
 			//Transmit Data to ESP
-      transmitData(&huart4, TxESP, 31);
+      transmitData(&huart4, TxESP, TX_ESP_DATA_SIZE);
 			
 			DFPlayer_Play_Track(track++);
 			if(track==5) track = 1;
