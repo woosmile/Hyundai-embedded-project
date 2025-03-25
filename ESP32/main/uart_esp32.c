@@ -9,7 +9,10 @@ static const char *TAG = "UART";
 static QueueHandle_t uart_queue;
 
 int parse_3byte_le_to_int(uint8_t *ptr) {
-    return (ptr[2] << 16) | (ptr[1] << 8) | ptr[0];  // Little Endian 처리
+    //return (ptr[2] << 16) | (ptr[1] << 8) | ptr[0];  // Little Endian 처리
+
+    int value = (ptr[0] * 100) + (ptr[1] * 10) + ptr[2];
+    return (value);
 }
 
 void uart_receive_task(void *arg)
