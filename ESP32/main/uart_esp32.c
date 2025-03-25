@@ -8,52 +8,65 @@ static const char *TAG = "UART";
 #define BUF_SIZE 1024
 static QueueHandle_t uart_queue;
 
+int parse_3byte_le_to_int(uint8_t *ptr) {
+    return (ptr[2] << 16) | (ptr[1] << 8) | ptr[0];  // Little Endian 처리
+}
+
 void uart_receive_task(void *arg)
 {
     uint8_t data[BUF_SIZE];
 
     while (1)
     {
-        int len = uart_read_bytes(UART_NUM_1, data, BUF_SIZE - 1, pdMS_TO_TICKS(100));
-        if (len > 0)
+        int len = uart_read_bytes(UART_NUM, data, 31, pdMS_TO_TICKS(100));
+        if (len == 31)
         {
-            data[len] = '\0';  // 문자열 종료
-            printf("UART 수신: %s\n", data);
+            int type = data[0];
 
-            // 1. 길이 체크 (최소 12자리)
-            if (len < 12) {
-                ESP_LOGW(TAG, "데이터 길이 부족: %s", data);
-                continue;
-            }
+            int temperature     = parse_3byte_le_to_int(&data[1]);
+            int humidity        = parse_3byte_le_to_int(&data[4]);
+            int illuminance     = parse_3byte_le_to_int(&data[7]);
+            int vibration       = parse_3byte_le_to_int(&data[10]);
+            int motorSpeed      = parse_3byte_le_to_int(&data[13]);
+            int isCarDoorOpen   = parse_3byte_le_to_int(&data[16]);
+            int isACActive      = parse_3byte_le_to_int(&data[19]);
+            int isSunroofOpen   = parse_3byte_le_to_int(&data[22]);
+            int isActivate      = parse_3byte_le_to_int(&data[25]);
+            int isAnomaly       = parse_3byte_le_to_int(&data[28]);
+            int isDriving       = (motorSpeed > 0) ? 1 : 0;
 
-            // 2. 파싱 (3자리씩 자름)
-            char temp_str[4], humi_str[4], speed_str[4], lux_str[4];
-            strncpy(temp_str, (char *)data, 3); temp_str[3] = '\0';
-            strncpy(humi_str, (char *)data + 3, 3); humi_str[3] = '\0';
-            strncpy(speed_str, (char *)data + 6, 3); speed_str[3] = '\0';
-            strncpy(lux_str, (char *)data + 9, 3); lux_str[3] = '\0';
+            ESP_LOGI(TAG, "UART 수신: type=%d temp=%d humi=%d speed=%d", type, temperature, humidity, motorSpeed);
 
-            int temperature = atoi(temp_str);
-            int humidity = atoi(humi_str);
-            int motorSpeed = atoi(speed_str);
-            int illuminance = atoi(lux_str);
-
-            // 3. JSON 문자열 생성
+            // 센서 JSON 전송
             char json_msg[256];
             snprintf(json_msg, sizeof(json_msg),
-                "{\"type\":\"sensor\",\"payload\":{\"temperature\":%d,\"humidity\":%d,\"motorSpeed\":%d,\"illuminance\":%d}}",
-                temperature, humidity, motorSpeed, illuminance);
+                "{\"type\":\"sensor\",\"payload\":{\"temperature\":%d,\"humidity\":%d,\"motorSpeed\":%d,\"illuminance\":%d,\"vibration\":%d}}",
+                temperature, humidity, motorSpeed, illuminance, vibration);
 
-             // 4. WebSocket으로 전송
             if (esp_websocket_client_is_connected(client)) {
                 esp_websocket_client_send_text(client, json_msg, strlen(json_msg), portMAX_DELAY);
-                ESP_LOGI(TAG, "🌐 WebSocket 전송: %s", json_msg);
+                ESP_LOGI(TAG, "🌐 WebSocket 전송 (sensor): %s", json_msg);
             }
+
+            if (type == 1) {
+                snprintf(json_msg, sizeof(json_msg),
+                    "{\"type\":\"carState\",\"payload\":{\"isCarDoorOpen\":%d,\"isSunroofOpen\":%d,\"isACActive\":%d,\"isAnomaly\":%d,\"isDriving\":%d,\"isActivate\":%d}}",
+                    isCarDoorOpen, isSunroofOpen, isACActive, isAnomaly, isDriving, isActivate);
+
+                if (esp_websocket_client_is_connected(client)) {
+                    esp_websocket_client_send_text(client, json_msg, strlen(json_msg), portMAX_DELAY);
+                    ESP_LOGI(TAG, "🌐 WebSocket 전송 (carState): %s", json_msg);
+                }
+            }
+        }
+        else {
+            ESP_LOGW(TAG, "⚠️ 수신된 데이터 길이 오류: %d 바이트", len);
         }
 
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
+
 
 void uart_init() {
     uart_config_t uart_config = {
