@@ -28,6 +28,8 @@
 #include "receiver.h"
 #include "timer.h"
 #include "transmitter.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 /* USER CODE END Includes */
 
@@ -44,9 +46,10 @@ __IO ITStatus Uart4R_Ready = RESET;
 __IO ITStatus Uart5R_Ready = RESET;
 uint8_t ToTop[TOTOPSIZE] = {'#', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '$'};
 uint8_t FromTop[FROMTOPSIZE];
-uint8_t ToBot[TOBOTSIZE] = "test_data";
-uint8_t FromBot[TOBOTSIZE];
+uint8_t ToBot[TOBOTSIZE] = "0";
+uint8_t FromBot[FROMBOTSIZE];
 volatile uint32_t	it_1sec_uart = 0;
+volatile uint32_t	it_1sec_uart2 = 0;
 volatile uint32_t isTransmitting = 0;
 /* USER CODE END PD */
 
@@ -122,7 +125,7 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim6);
 	//HAL_UART_Receive_IT(&huart5, FromSensor, sizeof(FromSensor));  // ???? ?? ?? ??
 	Printf("START master\r\n");
-	//HAL_UART_Receive_IT(&huart4, (uint8_t*)FromEsp, FROMESPSIZE);
+	HAL_UART_Receive_IT(&huart4, FromTop, FROMTOPSIZE);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -153,10 +156,18 @@ int main(void)
 		// 	//receive from sensor
 		// 	receiveData(&huart5, FromBot, TOBOTSIZE);
 		// }
+		//to ESP every second
     if(it_1sec_uart){
-      transmitData(&huart4, ToBot, TOBOTSIZE);
+			it_1sec_uart = 0;
+      transmitData(&huart4, ToTop, TOTOPSIZE);
+			//data process;
     }
-
+		//from ESP with rx intrpt
+    if(Uart4R_Ready == SET){
+			Uart4R_Ready = RESET;
+			//data process with fromtop
+			Printf("(From Top)receive data success: %s\r\n", FromTop);
+    }
 		//process data
 		
 		/*
@@ -189,10 +200,8 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
-  RCC_OscInitStruct.MSIState = RCC_MSI_ON;
-  RCC_OscInitStruct.MSICalibrationValue = 0;
-  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_5;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -203,7 +212,7 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
@@ -403,21 +412,8 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/*void MX_NVIC_Init(void)
-{
-    // TIM6
-    //HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 0, 0);
-    //HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
 
-    // USART4 transmit
-    HAL_NVIC_SetPriority(USART1_IRQn, 1, 0);
-    HAL_NVIC_EnableIRQ(USART4_5_IRQn);
-
-    // USART1 receive
-    HAL_NVIC_SetPriority(USART4_5_IRQn, 2, 0);
-    HAL_NVIC_EnableIRQ(USART1_IRQn);
-}*/
-
+/* USER CODE END 4 */
 
 /**
   * @brief  This function is executed in case of error occurrence.

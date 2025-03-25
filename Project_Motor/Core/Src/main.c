@@ -34,7 +34,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define RXBUFFERSIZE 15
+#define TX_ESP_DATA_SIZE 31
+#define RX_ESP_DATA_SIZE 1   // Output Actuator Control
+#define RX_SENSOR_DATA_SIZE 15
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,6 +47,7 @@
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef hlpuart1;
 UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
 
@@ -52,19 +55,24 @@ TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
-//Receive Data Buffer
-uint8_t aRxBuffer[RXBUFFERSIZE];
-//Transmit Data Complete flag
+
+//UART Flag
 __IO ITStatus Uart1_Ready = RESET;
+__IO ITStatus Uart4_Ready = RESET;
 __IO ITStatus Uart5_Ready = RESET;
-//Transmit receive Complete 
+//Transmit to Sensor receive done flag
 uint8_t receiveComplete = 1;
-
-//Transmit Car Startup
+//Transmit to LCD car startup status
 uint8_t carStartup = 0;
-
-//Receive Check Buffer
+//Receive form LCD receive done flag
 uint8_t checkReceive;
+// Transmit data to ESP
+uint8_t TxESP[TX_ESP_DATA_SIZE];
+// Receive data from ESP
+uint8_t RxESP;
+// Receive data from Sensor
+uint8_t RxSensor[RX_SENSOR_DATA_SIZE];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -76,6 +84,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_LPUART1_UART_Init(void);
 static void MX_USART4_UART_Init(void);
 static void MX_USART5_UART_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -90,7 +99,7 @@ volatile uint32_t mode_input = 0;
 
 volatile uint32_t temperature = 0;
 volatile uint32_t humidity = 0;
-volatile uint32_t light_lux = 0; //0~326
+volatile uint32_t light_lux = 0; //206~326
 volatile uint32_t shock = 0;
 volatile uint32_t potentiometer = 0; //0~326
 
@@ -103,25 +112,12 @@ volatile uint16_t track = 1;
 
 // Shock
 volatile int bVib = 0;
-
 // DHT11
 volatile int Temperature, Humidity;
-
-//Rotation
+//Rotation(Car Velocity)
 volatile int rot;
-
 //Light
 volatile int light;
-
-#define FROMESPSIZE 6
-#define FROMSENSORSIZE 12
-#define TOESPSIZE 12
-__IO ITStatus Uart4_Ready = RESET;
-
-uint8_t FromEsp[FROMESPSIZE];
-uint8_t FromSensor[FROMSENSORSIZE];
-uint8_t ToEsp[TOESPSIZE];
-
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -253,6 +249,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 		Uart1_Ready = SET;
 	if (UartHandle->Instance == USART5)
 		Uart5_Ready = SET;
+	if (UartHandle->Instance == USART4) {
+		Uart4_Ready = SET;
+		
+		//Receive data from ESP
+		HAL_UART_Receive_IT(&huart4, &RxESP, RX_ESP_DATA_SIZE);
+	}
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
@@ -272,6 +274,21 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		break;
 	}
 }
+
+void transmitData(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size){
+	if(HAL_UART_Transmit(huart, pData, Size, 200) == HAL_OK){
+		if(huart == &huart4){
+			Printf("Transmit to ESP Success: ");
+		}
+		for (volatile int i = 0; i <= 30; i++)
+			Printf("%d", pData[i]);
+		Printf("\r\n");
+	}
+	else{
+		Printf("Timeout Transmit to ESP\r\n");
+	}
+}
+
 void dataInit(void) {
 	Temperature = 0;
 	Humidity = 0;
@@ -286,19 +303,19 @@ void dataParsing(void) {
 		for (volatile int j = i * 3; j < (i * 3) + 3; j++) {
 			switch(i) {
 				case 0:
-					Temperature = Temperature + (aRxBuffer[j] * digit);
+					Temperature = Temperature + (RxSensor[j] * digit);
 					break ;
 				case 1:
-					Humidity = Humidity + (aRxBuffer[j] * digit);
+					Humidity = Humidity + (RxSensor[j] * digit);
 					break ;
 				case 2:
-					light = light + (aRxBuffer[j] * digit);
+					light = light + (RxSensor[j] * digit);
 					break ;
 				case 3:
-					bVib = bVib + (aRxBuffer[j] * digit);
+					bVib = bVib + (RxSensor[j] * digit);
 					break ;
 				case 4: 
-					rot = rot + (aRxBuffer[j] * digit);
+					rot = rot + (RxSensor[j] * digit);
 					break ;
 				default:
 					break ;
@@ -307,6 +324,26 @@ void dataParsing(void) {
 		}
 	}
 }
+
+void combineTxESP(void) {
+	//Output Actuator Modify Flag
+	TxESP[0] = 0;
+	
+	for (volatile int i = 1; i <= 15; i++) {
+		TxESP[i] = RxSensor[i - 1];
+	}
+	
+	//Output Actuator Status
+	for (volatile int i = 16; i <= 30; i++) {
+		TxESP[i] = 0;
+	}
+}
+
+void controlActuator(void) {
+	if (RxESP == '0')
+		carStartup = 1;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -344,8 +381,9 @@ int main(void)
   MX_LPUART1_UART_Init();
   MX_USART4_UART_Init();
   MX_USART5_UART_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-	Printf("RESET\r\n");
+	Printf("MASTER BOARD STARTUP\r\n");
 	BSP_LED_Init(LED2);
 	HAL_TIM_Base_Start_IT(&htim7); // for 1sec interupt
 	HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_2); // for Servo Motor
@@ -357,6 +395,10 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	DFPlayer_Play_Track(track++);
+	
+	// from esp to master receive ready
+	HAL_UART_Receive_IT(&huart4, &RxESP, RX_ESP_DATA_SIZE);
+	
   while (1)
   {
 		if(HAL_UART_Transmit_IT(&huart5, &carStartup, 1)!= HAL_OK)
@@ -382,7 +424,7 @@ int main(void)
 		/* Reset transmission flag */
 		Uart5_Ready = RESET;
 		
-		if(HAL_UART_Receive_IT(&huart1, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+		if(HAL_UART_Receive_IT(&huart1, (uint8_t *)RxSensor, RX_SENSOR_DATA_SIZE) != HAL_OK)
 		{
 			Error_Handler();
 		}
@@ -393,7 +435,7 @@ int main(void)
 		Uart1_Ready = RESET;
 		
 		for (volatile int i = 0; i < 15; i++) {
-			Printf("%d", aRxBuffer[i]);
+			Printf("%d", RxSensor[i]);
 		}
 		Printf("\r\n");
 
@@ -407,7 +449,15 @@ int main(void)
 		} 
 		Uart1_Ready = RESET;
 		
+
+		
+		
+		
+		// wookyung's code begin
 		dataParsing();
+		
+		// Combine TxESP data to transmit ESP
+		combineTxESP();
 		
 		control_wheel();
 			
@@ -422,6 +472,10 @@ int main(void)
 		
 		if(it_1sec){
 			it_1sec = 0;
+
+			//Transmit Data to ESP
+      transmitData(&huart4, TxESP, TX_ESP_DATA_SIZE);
+			
 			DFPlayer_Play_Track(track++);
 			if(track==5) track = 1;
 			
@@ -438,6 +492,13 @@ int main(void)
 			is_open_sunroof = (is_open_sunroof + 1) % 2;
 			bluetooth = (bluetooth + 1) % 2;
 		}
+		
+		if(Uart4_Ready == SET){
+			Uart4_Ready = RESET;
+			//data process with fromtop
+			Printf("Receive from ESP Success: %c\r\n", RxESP);
+			controlActuator();
+    }
 		
 		dataInit();
     /* USER CODE END WHILE */
@@ -485,8 +546,10 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_LPUART1;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_USART2
+                              |RCC_PERIPHCLK_LPUART1;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
   PeriphClkInit.Lpuart1ClockSelection = RCC_LPUART1CLKSOURCE_PCLK1;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
@@ -560,6 +623,44 @@ static void MX_USART1_UART_Init(void)
   /* USER CODE BEGIN USART1_Init 2 */
 
   /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+
+	HW_VCOM_Init(&huart2);
+#if 0
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 9600;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+#endif
+  /* USER CODE END USART2_Init 2 */
 
 }
 

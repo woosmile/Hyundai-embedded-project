@@ -46,6 +46,7 @@ extern uint8_t ToBot[];
 extern uint8_t FromBot[];
 extern volatile uint32_t isTransmitting;
 extern volatile uint32_t	it_1sec_uart;
+extern volatile uint32_t	it_1sec_uart2;
 extern TIM_HandleTypeDef htim6;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -88,7 +89,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 #define TOTOPSIZE 128
-#define FROMTOPSIZE 128
+#define FROMTOPSIZE 1
 #define TOBOTSIZE 128
 #define FROMBOTSIZE 128
 /* USER CODE END Private defines */
