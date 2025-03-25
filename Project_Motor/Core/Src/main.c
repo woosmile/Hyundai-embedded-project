@@ -397,7 +397,7 @@ int main(void)
 	DFPlayer_Play_Track(track++);
 	
 	// from esp to master receive ready
-	HAL_UART_Receive_IT(&huart4, TxESP, TX_ESP_DATA_SIZE);
+	HAL_UART_Receive_IT(&huart4, &RxESP, RX_ESP_DATA_SIZE);
 	
   while (1)
   {
