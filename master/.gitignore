@@ -1,7 +1,4 @@
-# 무시할 폴더
 Drivers/
 MDK-ARM/
-
-# 무시할 파일
 .mxproject
-master.ioc
+Project_Motor.ioc
