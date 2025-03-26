@@ -36,7 +36,22 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+extern __IO ITStatus Uart4T_Ready;
+extern __IO ITStatus Uart5T_Ready;
+extern __IO ITStatus Uart4R_Ready;
+extern __IO ITStatus Uart5R_Ready;
+extern uint8_t ToTop[];
+extern uint8_t FromTop[];
+extern uint8_t ToBot[];
+extern uint8_t FromBot[];
+extern volatile uint32_t isTransmitting;
+extern volatile uint32_t	it_1sec_uart;
+extern volatile uint32_t	it_1sec_uart2;
+extern TIM_HandleTypeDef htim6;
+extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart4;
+extern UART_HandleTypeDef huart5;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -73,7 +88,10 @@ void Error_Handler(void);
 #define TCK_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
-
+#define TOTOPSIZE 128
+#define FROMTOPSIZE 1
+#define TOBOTSIZE 128
+#define FROMBOTSIZE 128
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
