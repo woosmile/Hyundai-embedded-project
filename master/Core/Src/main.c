@@ -105,7 +105,7 @@ volatile uint32_t potentiometer = 0; //0~326
 
 volatile uint32_t is_open_door = 0;
 volatile uint32_t next_open_door = 0;
-volatile uint32_t is_start_fan = 0;
+volatile uint32_t is_start_fan = 1;
 volatile uint32_t next_start_fan = 0;
 volatile uint32_t is_open_sunroof = 0;
 volatile uint32_t next_open_sunroof = 0;
@@ -140,7 +140,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 void open_door(){
-	degree = 60;
+	degree = 90;
 	__HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_3,degree);
 }
 void close_door(){
@@ -148,7 +148,7 @@ void close_door(){
 	__HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_3,degree);
 }
 void open_sunroof(){
-	degree = 60;
+	degree = 90;
 	__HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_4,degree);
 }
 void close_sunroof(){
@@ -244,10 +244,10 @@ void DFPlayer_Stop(void)
 }
 
 void start_fan(){
-	HAL_GPIO_WritePin(FAN_GPIO_Port,FAN_Pin,GPIO_PIN_SET);
+	HAL_GPIO_WritePin(FAN_GPIO_Port,FAN_Pin,GPIO_PIN_RESET);
 }
 void stop_fan(){
-	HAL_GPIO_WritePin(FAN_GPIO_Port,FAN_Pin,GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(FAN_GPIO_Port,FAN_Pin,GPIO_PIN_SET);
 }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
@@ -373,6 +373,7 @@ void controlActuator(void) {
 	else if (RxESP == '1'){
 		carStartup = 1;
 		DFPlayer_Play_Track(3);
+		stop_fan();
 	}
 	else if (RxESP == '2')
 		next_open_sunroof = 0;
@@ -572,7 +573,6 @@ int main(void)
 	
 		if(it_1sec){
 			it_1sec = 0;
-
 			//Transmit Data to ESP
       transmitData(&huart4, TxESP, TX_ESP_DATA_SIZE);
 			
