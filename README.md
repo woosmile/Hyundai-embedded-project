@@ -1,9 +1,7 @@
-### MOVILINK: 차량 제어 플랫폼
+# MOVILINK: 차량 제어 플랫폼
 
 MOVILINK은 차량 상태를 모니터링하고 원격으로 제어할 수 있는 차량 제어 플랫폼입니다.  
 웹을 통해 차량의 다양한 기능을 제어할 수 있어 사용자에게 편리한 환경을 제공합니다.
-
----
 
 ## 📌 주요 기능
 
@@ -23,11 +21,7 @@ MOVILINK은 차량 상태를 모니터링하고 원격으로 제어할 수 있�
 - **스피커 알림 기능** (특정 동작 발생 시)
 - **LCD 디스플레이 지원** (차량 상태 시각화)
 
----
-
 ## 🎥 시연 영상
-
----
 
 ## 🛠 하드웨어 구성
 
@@ -63,8 +57,6 @@ MOVILINK은 차량 상태를 모니터링하고 원격으로 제어할 수 있�
 - Master로부터 받은 차량 상태 데이터를 웹 서버로 전송
 - 웹에서 받은 제어 명령을 Master로 전달
 
----
-
 ## 💻 소프트웨어 구성
 
 ### 🔧 임베디드 시스템
@@ -76,8 +68,6 @@ MOVILINK은 차량 상태를 모니터링하고 원격으로 제어할 수 있�
 - **개발 언어**: JavaScript
 - **프레임워크**: React, Express.js, Node.js, MongoDB
 
----
-
 ## 📝 시스템 개발 설계서
 ![Image](https://github.com/user-attachments/assets/a50ad8e5-da95-4a9d-a6ee-40d2b3c59a7a)
 
@@ -88,13 +78,9 @@ MOVILINK은 차량 상태를 모니터링하고 원격으로 제어할 수 있�
 ### 차량 상태 통신 데이터 포맷
 - uint8_t 31Bit
 - 0(차량상태변화여부) 000(온도) 000(습도) 000(조도) 000(진동감지) 000(가변저항) 000(문) 000(에어컨) 000(선루프) 000(시동) 000(주행여부)
-  
----
 
 ## 📝 네트워크 아키텍처
 ![Image](https://github.com/user-attachments/assets/c39b5394-a3bc-4a21-9180-72cde950c230)
-
----
 
 ## 🏗️ Diagram & Flow Chart
 
@@ -103,8 +89,6 @@ MOVILINK은 차량 상태를 모니터링하고 원격으로 제어할 수 있�
 
 ### Master Module Flow Chart
 ![Image](https://github.com/user-attachments/assets/d94fef61-37fb-48cc-89ea-5dd366291ff3)
-
----
 
 ## 📌 프로젝트 구조
 ```
@@ -115,3 +99,12 @@ Hyundai-embedded-project/
 │── sensor/         # Sensor 코드
 └── README.md       # 프로젝트 설명 파일
 ```
+
+## 팀 구성원  
+
+| 프로필 | 이름 | GitHub |
+|--------|------|--------|
+| ![](https://github.com/ideal402.png?size=50) | 이상빈 | [@ideal402](https://github.com/ideal402) |
+| ![](https://github.com/okchangheeok.png?size=50) | 옥창희 | [@okchangheeok](https://github.com/okchangheeok) |
+| ![](https://github.com/lolololoop.png?size=50) | 류우경 | [@lolololoop](https://github.com/lolololoop) |
+| ![](https://github.com/woosmile.png?size=50) | 김우성 | [@woosmile](https://github.com/woosmile) |
