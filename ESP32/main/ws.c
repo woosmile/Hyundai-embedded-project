@@ -56,6 +56,15 @@ void send_car_state_as_uart_code(uint8_t state_code) {
     ESP_LOGI(TAG, "📤 UART 상태코드 전송: %d", state_code);
 }
 
+void reset_temp_offset_task(void *param) {
+    for (int i = 0; i < 5; i++) {
+        temperature_offset = 5*(i+1);
+        vTaskDelay(pdMS_TO_TICKS(1000));  // 1초 간격
+    }
+    temperature_offset = 0;
+    vTaskDelete(NULL);
+}
+
 static void websocket_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     esp_websocket_event_data_t *data = (esp_websocket_event_data_t *)event_data;
@@ -77,18 +86,24 @@ static void websocket_event_handler(void *handler_args, esp_event_base_t base, i
             ESP_LOGI(TAG, "📥 명령 수신: %.*s", data->data_len, (char *)data->data_ptr);
 
             bool valid_command = false;
-            uint8_t state_code;
+            uint8_t state_code=0;
             char cmd_buf[64] = {0};
             int len = data->data_len > sizeof(cmd_buf) - 1 ? sizeof(cmd_buf) - 1 : data->data_len;
             memcpy(cmd_buf, data->data_ptr, len);
             cmd_buf[len] = '\0';   
 
             //차량 상태 변경
-            if (strcmp(cmd_buf, "toggle_start") == 0) {
+            if (strcmp(cmd_buf, "start") == 0) {
+                car_state.isActivate = true;
+                state_code = 1;
+                valid_command = true;
+            }
+            else if(strcmp(cmd_buf, "toggle_start") == 0) {
                 car_state.isActivate = !car_state.isActivate;
                 state_code = car_state.isActivate ? 1 : 0;
                 valid_command = true;
-            } else if (strcmp(cmd_buf, "toggle_sunroof") == 0) {
+            }
+             else if (strcmp(cmd_buf, "toggle_sunroof") == 0) {
                 car_state.isSunroofOpen = !car_state.isSunroofOpen;
                 state_code = car_state.isSunroofOpen ? 3 : 2;
                 valid_command = true;
@@ -101,10 +116,24 @@ static void websocket_event_handler(void *handler_args, esp_event_base_t base, i
                 state_code = car_state.isDriving ? 7 : 6;
                 valid_command = true;
             } else if (strcmp(cmd_buf, "toggle_door") == 0) {
-                car_state.isCarDoorOpen = !car_state.isCarDoorOpen;
-                state_code = car_state.isCarDoorOpen ? 9 : 8;
+                if (!car_state.isDriving) {
+                    car_state.isCarDoorOpen = !car_state.isCarDoorOpen;
+                    state_code = car_state.isCarDoorOpen ? 9 : 8;
+                    valid_command = true;
+                } else {
+                    // 운전 중일 때는 상태 변경하지 않음
+                    valid_command = false;
+                }
+            }else if (strcmp(cmd_buf, "test1") == 0) {
+                valid_command = false;
+                temperature_offset = 5;
+                xTaskCreate(reset_temp_offset_task, "reset_temp_offset", 2048, NULL, 5, NULL);
+            }else if (strcmp(cmd_buf, "airconOn") == 0) {
+                car_state.isACActive = true;
+                state_code = 5;
                 valid_command = true;
             } 
+            
             
             //uart 전송
             if(valid_command){

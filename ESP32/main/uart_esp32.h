@@ -9,5 +9,6 @@
 void uart_init(void);
 void uart_send_data(const char* data);
 void uart_receive_data(void);
+extern int temperature_offset;
 
 #endif // UART_ESP32_H
