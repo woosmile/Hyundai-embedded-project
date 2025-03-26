@@ -83,7 +83,7 @@ MOVILINK은 차량 상태를 모니터링하고 원격으로 제어할 수 있�
 ![Image](https://github.com/user-attachments/assets/c39b5394-a3bc-4a21-9180-72cde950c230)
 
 ## 🏗️ Diagram & Flow Chart
-<a href="[https://github.com](https://drive.google.com/file/d/1Jk9-tknyK9WS17EQ_y63NOpmKbOjyJ9z/view?usp=sharing)" target="_blank">전체 Diagram & Flow Chart</a>
+<a href="https://drive.google.com/file/d/1Jk9-tknyK9WS17EQ_y63NOpmKbOjyJ9z/view?usp=sharing" target="_blank">전체 Diagram & Flow Chart</a>
 
 ### Master Module Diagram
 ![Image](https://github.com/user-attachments/assets/309f9c15-96fc-469d-b278-12c671c6e387)
