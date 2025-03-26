@@ -52,8 +52,6 @@ void app_main(void)
         printf("Wi-Fi 연결 실패!\n");
     }
 
-
-
     while (!esp_websocket_client_is_connected(client)) {
         vTaskDelay(pdMS_TO_TICKS(500));
         printf("⏳ WebSocket 연결 대기 중...\n");
@@ -66,11 +64,11 @@ void app_main(void)
     // ble_init("ESP32_BLE_DEVICE");
 
     //자동 센서 정보 생성 시작
-    BaseType_t result = xTaskCreate(&sensor_loop_task, "sensor_loop_task", 4096, NULL, 5, NULL);
-    if (result == pdPASS) {
-        printf("센서 Task 시작됨\n");
-    } else {
-        printf("센서 Task 생성 실패!\n");
-    }
+    // BaseType_t result = xTaskCreate(&sensor_loop_task, "sensor_loop_task", 4096, NULL, 5, NULL);
+    // if (result == pdPASS) {
+    //     printf("센서 Task 시작됨\n");
+    // } else {
+    //     printf("센서 Task 생성 실패!\n");
+    // }
 
 }
