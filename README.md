@@ -18,7 +18,7 @@ MOVILINK은 차량 상태를 모니터링하고 원격으로 제어할 수 있�
 - **차량 온도 및 습도**: 측정 및 표시
 - **진동 감지 여부**: 감지 및 표시
 - **차량 속도**: 측정 및 표시
-- **스피커 알림**: 특정 동작 발생 시
+- **스피커 알림**: 특정 동작 발생 시 (차량 시동, 문 & 선루프 개폐, 차량 주행/정지)
 - **LCD 디스플레이 지원**: 차량 상태 시각화(차량 시동 여부, 온도, 습도, 차량 속도)
 
 ## 🎥 시연 영상
@@ -83,8 +83,7 @@ MOVILINK은 차량 상태를 모니터링하고 원격으로 제어할 수 있�
 ![Image](https://github.com/user-attachments/assets/c39b5394-a3bc-4a21-9180-72cde950c230)
 
 ## 🏗️ Diagram & Flow Chart
-
-[전체 Diagram & Flow Chart](https://drive.google.com/file/d/1Jk9-tknyK9WS17EQ_y63NOpmKbOjyJ9z/view?usp=sharing)
+<a href="[https://github.com](https://drive.google.com/file/d/1Jk9-tknyK9WS17EQ_y63NOpmKbOjyJ9z/view?usp=sharing)" target="_blank">전체 Diagram & Flow Chart</a>
 
 ### Master Module Diagram
 ![Image](https://github.com/user-attachments/assets/309f9c15-96fc-469d-b278-12c671c6e387)
