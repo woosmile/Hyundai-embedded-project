@@ -100,11 +100,11 @@ Hyundai-embedded-project/
 └── README.md       # 프로젝트 설명 파일
 ```
 
-## 팀 구성원  
+## 팀 구성원
 
-| 프로필 | 이름 | GitHub |
-|--------|------|--------|
-| ![](https://github.com/ideal402.png?size=50) | 이상빈 | [@ideal402](https://github.com/ideal402) |
-| ![](https://github.com/okchangheeok.png?size=50) | 옥창희 | [@okchangheeok](https://github.com/okchangheeok) |
-| ![](https://github.com/lolololoop.png?size=50) | 류우경 | [@lolololoop](https://github.com/lolololoop) |
-| ![](https://github.com/woosmile.png?size=50) | 김우성 | [@woosmile](https://github.com/woosmile) |
+| 이름 | GitHub |
+|------|--------|
+| 이상빈 | [@ideal402](https://github.com/ideal402) |
+| 옥창희 | [@okchangheeok](https://github.com/okchangheeok) |
+| 류우경 | [@lolololoop](https://github.com/lolololoop) |
+| 김우성 | [@woosmile](https://github.com/woosmile) |
