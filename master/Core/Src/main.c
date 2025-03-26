@@ -346,40 +346,42 @@ void combineTxESP(void) {
 		TxESP[i] = 0;
 	}
 	TxESP[16] = 0;
-	TxESP[16] = 0;
-	TxESP[16] = (uint8_t) is_open_door;
+	TxESP[17] = 0;
+	TxESP[18] = (uint8_t) is_open_door;
 	
-	TxESP[16] = 0;
-	TxESP[16] = 0;
-	TxESP[16] = (uint8_t) is_start_fan;
+	TxESP[19] = 0;
+	TxESP[20] = 0;
+	TxESP[21] = (uint8_t) is_start_fan;
 	
-	TxESP[16] = 0;
-	TxESP[16] = 0;
-	TxESP[16] = (uint8_t) is_open_sunroof;
+	TxESP[22] = 0;
+	TxESP[23] = 0;
+	TxESP[24] = (uint8_t) is_open_sunroof;
 	
-	TxESP[16] = 0;
-	TxESP[16] = 0;
-	TxESP[16] = (uint8_t) is_driving;
+	TxESP[25] = 0;
+	TxESP[26] = 0;
+	TxESP[27] = (uint8_t) carStartup;
 	
-	TxESP[16] = 0;
-	TxESP[16] = 0;
-	TxESP[16] = (uint8_t) emergency_stop;
+	TxESP[28] = 0;
+	TxESP[29] = 0;
+	TxESP[30] = (uint8_t) is_driving;
 }
 
 void controlActuator(void) {
 	
 	if (RxESP == '0')
 		carStartup = 0;
-	else if (RxESP == '1')
+	else if (RxESP == '1'){
 		carStartup = 1;
+		DFPlayer_Play_Track(3);
+	}
 	else if (RxESP == '2')
 		next_open_sunroof = 0;
 	else if (RxESP == '3')
 		next_open_sunroof = 1;
 	else if (RxESP == '4')
-		next_start_fan = 0;
-	else if (RxESP == '5')
 		next_start_fan = 1;
+	else if (RxESP == '5')
+		next_start_fan = 0;
 	else if (RxESP == '6')
 		next_driving = 0;
 	else if (RxESP == '7')
@@ -390,16 +392,34 @@ void controlActuator(void) {
 		next_open_door = 1;
 }
 void control_wheel(){
+	if(next_driving != is_driving){
+		is_driving = next_driving;
+		if(is_driving) DFPlayer_Play_Track(4);
+		else DFPlayer_Play_Track(5);
+	}
+	if(is_driving){
 		speed = ((int)rot)/10;
 		direction = 76 + speed;
 		__HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2,direction);
+	}
+	else{
+		speed = 0;
+		direction = 76 + speed;
+		__HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_2,direction);
+	}
 }
 void control_sunroof(){
 	if(next_open_sunroof != is_open_sunroof){
 		TxESP[0] = 1;
 		is_open_sunroof = next_open_sunroof;
-		if(is_open_sunroof==1) open_sunroof();
-		else if(is_open_sunroof==0) close_sunroof();
+		if(is_open_sunroof==1){
+			open_sunroof();
+			DFPlayer_Play_Track(1);
+		}
+		else if(is_open_sunroof==0){
+			close_sunroof();
+			DFPlayer_Play_Track(2);
+		}
 		//else if(is_open_sunroof || light_lux < 160) open_sunroof();
 		//else close_sunroof();
 	}
@@ -481,7 +501,7 @@ int main(void)
 	
 	// from esp to master receive ready
 	HAL_UART_Receive_IT(&huart4, &RxESP, RX_ESP_DATA_SIZE);
-	
+	stop_fan();
   while (1)
   {
 		if(HAL_UART_Transmit_IT(&huart5, &carStartup, 1)!= HAL_OK)
@@ -558,7 +578,7 @@ int main(void)
 			
 			//DFPlayer_Play_Track(track++);
 			//if(track==5) track = 1;
-			
+			/*
 			//Dummy Data from system
 			temperature = (temperature + 3) % 50;
 			humidity = (humidity + 8) % 100;
@@ -567,10 +587,11 @@ int main(void)
 			potentiometer = (potentiometer + 10) % 326;
 			
 			//Dummy Data from user
-			is_open_door = (is_open_door + 1) % 2;
+			//is_open_door = (is_open_door + 1) % 2;
 			//temp_user = (temp_user + 13) % 50;
 			is_open_sunroof = (is_open_sunroof + 1) % 2;
 			bluetooth = (bluetooth + 1) % 2;
+			*/
 		}
 		
 		if(Uart4_Ready == SET){
