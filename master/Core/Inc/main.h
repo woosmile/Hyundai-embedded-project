@@ -36,22 +36,7 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-extern __IO ITStatus Uart4T_Ready;
-extern __IO ITStatus Uart5T_Ready;
-extern __IO ITStatus Uart4R_Ready;
-extern __IO ITStatus Uart5R_Ready;
-extern uint8_t ToTop[];
-extern uint8_t FromTop[];
-extern uint8_t ToBot[];
-extern uint8_t FromBot[];
-extern volatile uint32_t isTransmitting;
-extern volatile uint32_t	it_1sec_uart;
-extern volatile uint32_t	it_1sec_uart2;
-extern TIM_HandleTypeDef htim6;
-extern UART_HandleTypeDef huart1;
-extern UART_HandleTypeDef huart2;
-extern UART_HandleTypeDef huart4;
-extern UART_HandleTypeDef huart5;
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -64,6 +49,8 @@ extern UART_HandleTypeDef huart5;
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -72,26 +59,20 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define B1_Pin GPIO_PIN_13
-#define B1_GPIO_Port GPIOC
+#define USER_BUTTON_Pin GPIO_PIN_13
+#define USER_BUTTON_GPIO_Port GPIOC
+#define USER_BUTTON_EXTI_IRQn EXTI4_15_IRQn
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
-#define USART_TX_Pin GPIO_PIN_2
-#define USART_TX_GPIO_Port GPIOA
-#define USART_RX_Pin GPIO_PIN_3
-#define USART_RX_GPIO_Port GPIOA
-#define LD2_Pin GPIO_PIN_5
-#define LD2_GPIO_Port GPIOA
+#define FAN_Pin GPIO_PIN_5
+#define FAN_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
-#define TOTOPSIZE 128
-#define FROMTOPSIZE 1
-#define TOBOTSIZE 128
-#define FROMBOTSIZE 128
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
