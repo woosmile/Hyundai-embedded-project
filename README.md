@@ -90,7 +90,7 @@ MOVILINK는 차량 상태를 모니터링하고 원격으로 제어할 수 있�
 - 차량문: 8(닫힘), 9(열림)
 
 ## 📝 네트워크 아키텍처
-![Image](https://github.com/user-attachments/assets/1a1a244f-a467-43a7-a0d5-9f7df69b34e7)
+![Image](https://github.com/user-attachments/assets/119b2d35-065a-4dc8-aee6-edbe255dfb72)
 
 ## 🏗️ Diagram & Flow Chart
 
@@ -108,7 +108,89 @@ MOVILINK는 차량 상태를 모니터링하고 원격으로 제어할 수 있�
   
 </details>
 
+<details>
+  <summary>Motor Diagram</summary>
+  
+  ![Motor Diagram](https://github.com/user-attachments/assets/807776d4-246f-493d-b008-205df00c5da6)
+  
+</details>
 
+<details>
+  <summary>Motor Flow Chart</summary>
+  
+  ![Motor Flow Chart](https://github.com/user-attachments/assets/04972059-63fa-4cfe-b032-dc8be511e854)
+  
+</details>
+
+<details>
+  <summary>Speaker Diagram</summary>
+  
+  ![Speaker Diagram](https://github.com/user-attachments/assets/9d0cb3d9-9f90-4ba3-bee1-cda989d74c4c)
+  
+</details>
+
+<details>
+  <summary>Speaker Flow Chart</summary>
+  
+  ![Speaker Flow Chart](https://github.com/user-attachments/assets/0e1576d3-f61a-4670-9eb7-c7cdee1cb51c)
+  
+</details>
+
+<details>
+  <summary>Fan Diagram</summary>
+  
+  ![Fan Diagram](https://github.com/user-attachments/assets/bb50f7b3-042c-4f9c-9e5c-d20421285946)
+  
+</details>
+
+<details>
+  <summary>Fan Flow Chart</summary>
+  
+  ![Fan Flow Chart](https://github.com/user-attachments/assets/6564d808-7397-4785-8f13-6193738c2173)
+  
+</details>
+
+<details>
+  <summary>Sensor Module Diagram</summary>
+  
+  ![Sensor Module Diagram](https://github.com/user-attachments/assets/d7176046-fcf0-4899-8b1f-f603b8ba44e5)
+  
+</details>
+
+<details>
+  <summary>Sensor Module Flow Chart</summary>
+  
+  ![Sensor Module Flow Chart](https://github.com/user-attachments/assets/fd4d89c6-145b-4a3e-90c2-6036b7739eb6)
+  
+</details>
+
+<details>
+  <summary>LCD Module Diagram</summary>
+  
+  ![LCD Module Diagram](https://github.com/user-attachments/assets/3e43e31a-51d9-4665-a4e4-fb9c08b584c1)
+  
+</details>
+
+<details>
+  <summary>LCD Module Flow Chart</summary>
+  
+  ![LCD Module Flow Chart](https://github.com/user-attachments/assets/e328ec43-b0e0-4b6a-829f-d42af1b9bbaf)
+  
+</details>
+
+<details>
+  <summary>ESP32 Module Diagram</summary>
+  
+  ![ESP32 Module Diagram](https://github.com/user-attachments/assets/ff6f4926-d3c5-4b63-8aa1-907b31ce2cd4)
+  
+</details>
+
+<details>
+  <summary>ESP32 Module Flow Chart</summary>
+  
+  ![ESP32 Module Flow Chart](https://github.com/user-attachments/assets/44c073f0-d86c-47a0-b99c-3991eef1fc7c)
+  
+</details>
 
 
 ## 📌 프로젝트 구조
