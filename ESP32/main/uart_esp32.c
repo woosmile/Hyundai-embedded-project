@@ -14,6 +14,7 @@ int parse_3byte_le_to_int(uint8_t *ptr) {
     int value = (ptr[0] * 100) + (ptr[1] * 10) + ptr[2];
     return (value);
 }
+int temperature_offset = 0;
 
 void uart_receive_task(void *arg)
 {
@@ -27,6 +28,7 @@ void uart_receive_task(void *arg)
             int type = data[0];
 
             int temperature     = parse_3byte_le_to_int(&data[1]);
+            temperature += temperature_offset; 
             int humidity        = parse_3byte_le_to_int(&data[4]);
             int illuminance     = parse_3byte_le_to_int(&data[7]);
             int vibration       = parse_3byte_le_to_int(&data[10]);
@@ -35,15 +37,14 @@ void uart_receive_task(void *arg)
             int isACActive      = parse_3byte_le_to_int(&data[19]);
             int isSunroofOpen   = parse_3byte_le_to_int(&data[22]);
             int isActivate      = parse_3byte_le_to_int(&data[25]);
-            int isAnomaly       = parse_3byte_le_to_int(&data[28]);
-            int isDriving       = (motorSpeed > 0) ? 1 : 0;
-
-            ESP_LOGI(TAG, "UART 수신: type=%d temp=%d humi=%d speed=%d", type, temperature, humidity, motorSpeed);
+            int isDriving       = parse_3byte_le_to_int(&data[28]);
+            
+            ESP_LOGI(TAG, "UART 수신: isCarDoorOpen=%d isACActive=%d isSunroofOpen=%d isActivate=%d", isCarDoorOpen, isACActive, isSunroofOpen, isActivate);
 
             // 센서 JSON 전송
             char json_msg[256];
             snprintf(json_msg, sizeof(json_msg),
-                "{\"type\":\"sensor\",\"payload\":{\"temperature\":%d,\"humidity\":%d,\"motorSpeed\":%d,\"illuminance\":%d,\"vibration\":%d}}",
+                "{\"type\":\"sensor\",\"payload\":{\"temperature\":%d,\"humidity\":%d,\"motorSpeedRaw\":%d,\"illuminance\":%d,\"vibration\":%d}}",
                 temperature, humidity, motorSpeed, illuminance, vibration);
 
             if (esp_websocket_client_is_connected(client)) {
@@ -51,19 +52,19 @@ void uart_receive_task(void *arg)
                 ESP_LOGI(TAG, "🌐 WebSocket 전송 (sensor): %s", json_msg);
             }
 
-            if (type == 1) {
-                snprintf(json_msg, sizeof(json_msg),
-                    "{\"type\":\"carState\",\"payload\":{\"isCarDoorOpen\":%d,\"isSunroofOpen\":%d,\"isACActive\":%d,\"isAnomaly\":%d,\"isDriving\":%d,\"isActivate\":%d}}",
-                    isCarDoorOpen, isSunroofOpen, isACActive, isAnomaly, isDriving, isActivate);
+            char json_msg2[256];
+            snprintf(json_msg2, sizeof(json_msg2),
+                "{\"type\":\"carState\",\"payload\":{\"isCarDoorOpen\":%d,\"isSunroofOpen\":%d,\"isACActive\":%d,\"isAnomaly\":%d,\"isDriving\":%d,\"isActivate\":%d}}",
+                isCarDoorOpen, isSunroofOpen, isACActive, 0, isDriving, isActivate);
 
-                if (esp_websocket_client_is_connected(client)) {
-                    esp_websocket_client_send_text(client, json_msg, strlen(json_msg), portMAX_DELAY);
-                    ESP_LOGI(TAG, "🌐 WebSocket 전송 (carState): %s", json_msg);
-                }
+            if (esp_websocket_client_is_connected(client)) {
+                esp_websocket_client_send_text(client, json_msg2, strlen(json_msg2), portMAX_DELAY);
+                ESP_LOGI(TAG, "🌐 WebSocket 전송 (carState): %s", json_msg2);
             }
         }
         else {
-            ESP_LOGW(TAG, "⚠️ 수신된 데이터 길이 오류: %d 바이트", len);
+            // ESP_LOGW(TAG, "⚠️ 수신된 데이터 길이 오류: %d 바이트", len);
+            continue;
         }
 
         vTaskDelay(pdMS_TO_TICKS(50));
