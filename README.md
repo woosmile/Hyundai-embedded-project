@@ -74,32 +74,38 @@ MOVILINK는 차량 상태를 모니터링하고 원격으로 제어할 수 있�
 ![Image](https://github.com/user-attachments/assets/a50ad8e5-da95-4a9d-a6ee-40d2b3c59a7a)
 
 ### 센서 통신 데이터 포맷
-- uint8_t 15Bit
+- uint8_t 15Byte
 - 000(온도) 000(습도) 000(조도) 000(진동감지) 000(가변저항, 속도)
 
 ### 차량 상태 통신 데이터 포맷
-- uint8_t 31Bit
+- uint8_t 31Byte
 - 0(차량상태변화여부) 000(온도) 000(습도) 000(조도) 000(진동감지) 000(가변저항) 000(문) 000(에어컨) 000(선루프) 000(시동) 000(주행여부)
 
 ### 차량 제어 신호 통신 데이터 포맷
-- uint8_t 1Bit
+- uint8_t 1Byte
 - 차량시동: 0(OFF), 1(ON)
 - 선루프: 2(닫힘), 3(열림)
 - 에어컨: 4(OFF), 5(ON)
-- 차량주행: 6(멈춤), 7(출발)
+- 차량주행: 6(정지), 7(출발)
 - 차량문: 8(닫힘), 9(열림)
 
 ## 📝 네트워크 아키텍처
 ![Image](https://github.com/user-attachments/assets/1a1a244f-a467-43a7-a0d5-9f7df69b34e7)
 
 ## 🏗️ Diagram & Flow Chart
-[전체 Diagram & Flow Chart](https://drive.google.com/file/d/1Jk9-tknyK9WS17EQ_y63NOpmKbOjyJ9z/view?usp=sharing)
 
-### Master Module Diagram
-![Image](https://github.com/user-attachments/assets/309f9c15-96fc-469d-b278-12c671c6e387)
+<details>
+  <summary>Master Module Diagram</summary>
+  ![Master Module Diagram](https://github.com/user-attachments/assets/309f9c15-96fc-469d-b278-12c671c6e387)
+</details>
 
-### Master Module Flow Chart
-![Image](https://github.com/user-attachments/assets/d94fef61-37fb-48cc-89ea-5dd366291ff3)
+<details>
+  <summary>Master Module Flow Chart</summary>
+  ![Master Module Flow Chart](https://github.com/user-attachments/assets/d94fef61-37fb-48cc-89ea-5dd366291ff3)
+</details>
+
+
+
 
 ## 📌 프로젝트 구조
 ```
